@@ -295,6 +295,17 @@ function createPlayer(name) {
   return player;
 }
 
+function normalizedName(name = "") {
+  return String(name).trim().toLowerCase();
+}
+
+function removePlayerFromRoom(room, playerId) {
+  room.playerIds = room.playerIds.filter((id) => id !== playerId);
+  if (room.round) {
+    room.round.guesses = room.round.guesses.filter((guess) => guess.playerId !== playerId);
+  }
+}
+
 function createRoom(host, settings) {
   const room = {
     id: id("r_").slice(0, 6).toUpperCase(),
@@ -308,6 +319,7 @@ function createRoom(host, settings) {
       isPublic: Boolean(settings.isPublic)
     },
     playerIds: [host.id],
+    bannedNames: [],
     roundIndex: 0,
     round: null,
     history: [],
@@ -612,6 +624,7 @@ function revealRound(room) {
   });
 
   room.round.revealed = true;
+  room.round.revealedAt = Date.now();
   room.round.results = results;
   room.round.listingRating = listingRating(room.round.listing.id);
   room.history.push({
@@ -649,7 +662,11 @@ function listingRating(listingId) {
 }
 
 function maybeAdvance(room) {
-  if (!room.round || room.round.revealed) return;
+  if (!room.round) return;
+  if (room.round.revealed) {
+    if (Date.now() >= (room.round.revealedAt || Date.now()) + 20000) finishOrNext(room);
+    return;
+  }
   const allAnswered = room.round.guesses.length >= room.playerIds.length;
   if (Date.now() >= room.round.endsAt || allAnswered) revealRound(room);
 }
@@ -940,19 +957,58 @@ const server = http.createServer(async (req, res) => {
     const room = rooms.get(roomId);
     if (!room) return json(res, 404, { error: "Salon introuvable" });
     if (room.playerIds.length >= 20) return json(res, 409, { error: "Salon complet" });
+    if (room.bannedNames.includes(normalizedName(body.name))) {
+      return json(res, 403, { error: "Ce pseudo est banni du salon" });
+    }
     const player = createPlayer(body.name);
     room.playerIds.push(player.id);
     return json(res, 200, { player, room: roomState(room, player.id) });
   }
 
   if (req.method === "POST" && url.pathname.match(/^\/api\/rooms\/[^/]+\/bots$/)) {
+    const body = await readBody(req);
     const roomId = url.pathname.split("/")[3].toUpperCase();
     const room = rooms.get(roomId);
     if (!room) return json(res, 404, { error: "Salon introuvable" });
+    if (body.playerId !== room.hostId) return json(res, 403, { error: "Seul l'hote peut ajouter des joueurs demo" });
     ["Alex", "Sam", "Nora"].forEach((name) => {
-      if (room.playerIds.length < 6) room.playerIds.push(createPlayer(name).id);
+      const alreadyHere = room.playerIds.some((pid) => players.get(pid)?.name === name);
+      if (room.playerIds.length < 6 && !alreadyHere && !room.bannedNames.includes(normalizedName(name))) {
+        room.playerIds.push(createPlayer(name).id);
+      }
     });
-    return json(res, 200, { room: roomState(room) });
+    return json(res, 200, { room: roomState(room, body.playerId) });
+  }
+
+  if (req.method === "POST" && url.pathname.match(/^\/api\/rooms\/[^/]+\/kick$/)) {
+    const body = await readBody(req);
+    const roomId = url.pathname.split("/")[3].toUpperCase();
+    const room = rooms.get(roomId);
+    if (!room) return json(res, 404, { error: "Salon introuvable" });
+    if (body.playerId !== room.hostId) return json(res, 403, { error: "Seul l'hote peut expulser un joueur" });
+    const targetId = String(body.targetId || "");
+    if (targetId === room.hostId) return json(res, 400, { error: "Impossible d'expulser l'hote" });
+    if (!room.playerIds.includes(targetId)) return json(res, 404, { error: "Joueur introuvable dans le salon" });
+    removePlayerFromRoom(room, targetId);
+    maybeAdvance(room);
+    return json(res, 200, { room: roomState(room, body.playerId) });
+  }
+
+  if (req.method === "POST" && url.pathname.match(/^\/api\/rooms\/[^/]+\/ban$/)) {
+    const body = await readBody(req);
+    const roomId = url.pathname.split("/")[3].toUpperCase();
+    const room = rooms.get(roomId);
+    if (!room) return json(res, 404, { error: "Salon introuvable" });
+    if (body.playerId !== room.hostId) return json(res, 403, { error: "Seul l'hote peut bannir un joueur" });
+    const targetId = String(body.targetId || "");
+    const target = players.get(targetId);
+    if (targetId === room.hostId) return json(res, 400, { error: "Impossible de bannir l'hote" });
+    if (!target || !room.playerIds.includes(targetId)) return json(res, 404, { error: "Joueur introuvable dans le salon" });
+    const name = normalizedName(target.name);
+    if (name && !room.bannedNames.includes(name)) room.bannedNames.push(name);
+    removePlayerFromRoom(room, targetId);
+    maybeAdvance(room);
+    return json(res, 200, { room: roomState(room, body.playerId) });
   }
 
   if (req.method === "POST" && url.pathname.match(/^\/api\/rooms\/[^/]+\/start$/)) {
@@ -990,6 +1046,7 @@ const server = http.createServer(async (req, res) => {
     const room = rooms.get(roomId);
     const player = players.get(body.playerId);
     if (!room || !player || !room.round) return json(res, 404, { error: "Partie introuvable" });
+    if (!room.playerIds.includes(player.id)) return json(res, 403, { error: "Tu n'es plus dans ce salon" });
     maybeAdvance(room);
     if (room.round.revealed) return json(res, 409, { error: "Manche terminee" });
     if (!room.round.guesses.some((g) => g.playerId === player.id)) {
@@ -1010,15 +1067,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === "POST" && url.pathname.match(/^\/api\/rooms\/[^/]+\/next$/)) {
+    const body = await readBody(req);
     const roomId = url.pathname.split("/")[3].toUpperCase();
     const room = rooms.get(roomId);
     if (!room) return json(res, 404, { error: "Salon introuvable" });
+    if (body.playerId !== room.hostId) return json(res, 403, { error: "Seul l'hote peut passer a la manche suivante" });
+    if (room.round && !room.round.revealed) return json(res, 409, { error: "La manche n'est pas encore terminee" });
     if (!finishOrNext(room)) {
       return json(res, 409, {
         error: "Aucune annonce reelle disponible pour continuer. Le catalogue demo est desactive."
       });
     }
-    return json(res, 200, { room: roomState(room) });
+    return json(res, 200, { room: roomState(room, body.playerId) });
   }
 
   if (req.method === "GET" && url.pathname.match(/^\/api\/rooms\/[^/]+$/)) {

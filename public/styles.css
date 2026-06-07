@@ -719,6 +719,13 @@ h2 {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.player.host-player {
+  border-color: rgba(255, 122, 24, 0.42);
+  background:
+    linear-gradient(135deg, rgba(255, 122, 24, 0.13), rgba(111, 44, 255, 0.08)),
+    rgba(255, 255, 255, 0.06);
+}
+
 .player img {
   width: 36px;
   height: 36px;
@@ -733,6 +740,29 @@ h2 {
 .player span {
   color: var(--muted);
   font-size: 0.84rem;
+}
+
+.player-main {
+  min-width: 0;
+}
+
+.player-main strong,
+.player-main span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-badge {
+  color: #ffb064;
+  font-size: 0.82rem;
+}
+
+.player-actions {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 
 .play-area {
@@ -1104,6 +1134,8 @@ h2 {
   .admin-dashboard,
   .game,
   .listing,
+  .grid.two,
+  .meta,
   .guess {
     grid-template-columns: 1fr;
   }
@@ -1172,5 +1204,154 @@ h2 {
 
   .listing-directory {
     max-height: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app {
+    width: min(100% - 14px, 1200px);
+    padding: 8px 0 18px;
+  }
+
+  .topbar {
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .brandline {
+    width: 100%;
+    gap: 8px;
+  }
+
+  .brand-logo {
+    width: min(220px, calc(100vw - 86px));
+    height: 52px;
+  }
+
+  .home-button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .account-login,
+  .account-name,
+  .account-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .hub,
+  .menu-screen {
+    min-height: auto;
+    padding: 8px 0 24px;
+  }
+
+  .hero-logo {
+    width: min(320px, 100%);
+  }
+
+  .hub-copy h2 {
+    font-size: clamp(2rem, 12vw, 3.4rem);
+    line-height: 0.98;
+  }
+
+  .hub-copy p:not(.eyebrow) {
+    font-size: 0.98rem;
+  }
+
+  .menu-grid {
+    gap: 10px;
+  }
+
+  .menu-card {
+    min-height: 136px;
+    padding: 18px;
+  }
+
+  .menu-card span {
+    margin-bottom: 24px;
+  }
+
+  .menu-card strong {
+    font-size: clamp(1.9rem, 10vw, 2.8rem);
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .game {
+    gap: 12px;
+  }
+
+  .sidebar {
+    gap: 10px;
+  }
+
+  .room-code {
+    gap: 10px;
+  }
+
+  .players {
+    grid-template-columns: 1fr;
+  }
+
+  .player {
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+
+  .player-actions button {
+    padding: 0.58rem 0.5rem;
+  }
+
+  .hero {
+    min-height: 220px;
+  }
+
+  .hero img {
+    height: min(58vh, 340px);
+  }
+
+  .slider-arrow {
+    width: 40px;
+    height: 48px;
+    font-size: 1.7rem;
+  }
+
+  .timer {
+    top: 10px;
+    right: 10px;
+    min-width: 48px;
+    height: 48px;
+    font-size: 1.25rem;
+  }
+
+  .image-count {
+    left: 10px;
+    bottom: 10px;
+  }
+
+  .guess {
+    align-items: stretch;
+  }
+
+  .guess button,
+  .setup button,
+  #nextRound,
+  #restartSession {
+    width: 100%;
+  }
+
+  .rank-row {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .rank-row > strong:first-child {
+    color: #ffb064;
+  }
+
+  .final-chart {
+    padding: 6px;
   }
 }

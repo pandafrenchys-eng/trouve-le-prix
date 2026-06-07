@@ -76,7 +76,11 @@
                     <option value="15">15s</option>
                     <option value="30" selected>30s</option>
                     <option value="60">60s</option>
+                    <option value="custom">Personnalisé</option>
                   </select>
+                </label>
+                <label id="customTimeWrap" class="hidden">Secondes
+                  <input id="customRoundTime" type="number" min="5" max="300" step="5" value="45" />
                 </label>
               </div>
               <label>Mode
@@ -253,6 +257,7 @@
             </div>
             <h2 id="realPrice"></h2>
             <div id="ranking"></div>
+            <p id="autoNextHint" class="note"></p>
             <button id="nextRound">Manche suivante</button>
           </section>
 

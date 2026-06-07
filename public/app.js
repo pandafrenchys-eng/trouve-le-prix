@@ -20,6 +20,20 @@ const $ = (id) => document.getElementById(id);
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 let authMode = "login";
 
+function isHost() {
+  return Boolean(state.room && state.player?.id === state.room.hostId);
+}
+
+function roundTimeFromForm() {
+  if ($("roundTime").value !== "custom") return Number($("roundTime").value) || 30;
+  const value = Number($("customRoundTime").value) || 45;
+  return Math.min(300, Math.max(5, Math.round(value)));
+}
+
+function autoNextSeconds(round) {
+  return Math.max(0, Math.ceil(((round?.revealedAt || Date.now()) + 20000 - Date.now()) / 1000));
+}
+
 function showMenu(name) {
   $("mainMenu").classList.toggle("hidden", name !== "main");
   $("playMenu").classList.toggle("hidden", name !== "play");
@@ -255,6 +269,11 @@ function startPolling() {
     if (!state.room) return;
     try {
       const data = await api(`/api/rooms/${state.room.id}?playerId=${state.player?.id || ""}`);
+      if (state.player && !data.room.players.some((player) => player.id === state.player.id)) {
+        goHome();
+        $("status").textContent = "Tu as été expulsé ou banni du salon.";
+        return;
+      }
       state.room = data.room;
       render();
     } catch (err) {
@@ -267,6 +286,7 @@ function render() {
   const room = state.room;
   if (!room) return;
   syncAccountFromRoom(room);
+  const host = isHost();
   const restartSeconds = Math.max(0, Math.ceil(((room.restartAt || 0) - Date.now()) / 1000));
   $("status").textContent =
     room.status === "lobby"
@@ -280,10 +300,15 @@ function render() {
   $("players").innerHTML = room.players
     .map(
       (p) => `
-      <div class="player">
+      <div class="player ${p.id === room.hostId ? "host-player" : ""}">
         <img src="${p.avatar}" alt="" />
-        <div><strong>${p.name}</strong><span>${Math.round(p.score)} pts · ${p.wallet}$</span></div>
-        <strong>${p.wins}</strong>
+        <div class="player-main"><strong>${p.name}</strong><span>${Math.round(p.score)} pts · ${p.wallet}$</span></div>
+        <strong class="player-badge">${p.id === room.hostId ? "Hôte" : `${p.wins}`}</strong>
+        ${host && p.id !== room.hostId ? `
+          <div class="player-actions">
+            <button type="button" class="tiny secondary" data-kick="${p.id}">Expulser</button>
+            <button type="button" class="tiny danger-soft" data-ban="${p.id}">Bannir</button>
+          </div>` : ""}
       </div>`
     )
     .join("");
@@ -294,8 +319,11 @@ function render() {
   $("restarting").classList.toggle("hidden", room.status !== "restarting");
   $("finished").classList.toggle("hidden", room.status !== "finished");
   $("startGame").disabled = room.status !== "lobby";
+  $("startGame").classList.toggle("hidden", !host);
+  $("addBots").classList.toggle("hidden", !host || room.status !== "lobby");
   $("nextRound").textContent = room.roundIndex >= room.settings.rounds ? "Voir le classement final" : "Manche suivante";
-  $("restartSession").classList.toggle("hidden", room.status !== "finished" || state.player?.id !== room.hostId);
+  $("nextRound").classList.toggle("hidden", !host || !room.round?.revealed);
+  $("restartSession").classList.toggle("hidden", room.status !== "finished" || !host);
   $("restartTimer").textContent = restartSeconds;
   if (room.status !== "finished") state.finalRenderKey = null;
 
@@ -354,6 +382,7 @@ function tickTimer(endsAt) {
 
 function renderResults(round) {
   const rating = round.listingRating || { percent: 0, count: 0 };
+  const seconds = autoNextSeconds(round);
   const selectedRating = Number(localStorage.getItem(`listingVote:${round.listing.id}`) || 0);
   $("listingRatingPercent").textContent = rating.count ? `${rating.percent}%` : "--%";
   $("listingRatingCount").textContent = rating.count
@@ -374,6 +403,9 @@ function renderResults(round) {
       </div>`
     )
     .join("");
+  $("autoNextHint").textContent = isHost()
+    ? `Manche suivante automatique dans ${seconds}s. L'hôte peut passer maintenant.`
+    : `Manche suivante automatique dans ${seconds}s.`;
 }
 
 function renderRatingButtons(listingId, selectedRating = 0) {
@@ -419,7 +451,7 @@ $("createRoom").addEventListener("click", async () => {
     const mode = $("mode").value;
     const settings = {
       rounds: Number($("rounds").value),
-      roundTime: mode === "Blitz" ? 15 : Number($("roundTime").value),
+      roundTime: roundTimeFromForm(),
       mode,
       categories: selectedCategories()
     };
@@ -450,7 +482,10 @@ $("joinRoom").addEventListener("click", async () => {
 
 $("addBots").addEventListener("click", async () => {
   try {
-    const data = await api(`/api/rooms/${state.room.id}/bots`, { method: "POST", body: "{}" });
+    const data = await api(`/api/rooms/${state.room.id}/bots`, {
+      method: "POST",
+      body: JSON.stringify({ playerId: state.player?.id })
+    });
     state.room = data.room;
     render();
   } catch (error) {
@@ -524,12 +559,37 @@ $("nextImage").addEventListener("click", () => moveListingImage(1));
 
 $("nextRound").addEventListener("click", async () => {
   try {
-    const data = await api(`/api/rooms/${state.room.id}/next`, { method: "POST", body: "{}" });
+    const data = await api(`/api/rooms/${state.room.id}/next`, {
+      method: "POST",
+      body: JSON.stringify({ playerId: state.player?.id })
+    });
     state.room = data.room;
     render();
   } catch (error) {
     showError(error);
   }
+});
+
+$("players").addEventListener("click", async (event) => {
+  const kickButton = event.target.closest("[data-kick]");
+  const banButton = event.target.closest("[data-ban]");
+  const targetId = kickButton?.dataset.kick || banButton?.dataset.ban;
+  if (!targetId || !state.room) return;
+  try {
+    const action = banButton ? "ban" : "kick";
+    const data = await api(`/api/rooms/${state.room.id}/${action}`, {
+      method: "POST",
+      body: JSON.stringify({ playerId: state.player?.id, targetId })
+    });
+    state.room = data.room;
+    render();
+  } catch (error) {
+    showError(error);
+  }
+});
+
+$("roundTime").addEventListener("change", () => {
+  $("customTimeWrap").classList.toggle("hidden", $("roundTime").value !== "custom");
 });
 
 $("openPlay").addEventListener("click", () => showMenu("play"));
