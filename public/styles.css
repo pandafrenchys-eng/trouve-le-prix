@@ -299,6 +299,14 @@ h2 {
   gap: 16px;
 }
 
+.listing-preview {
+  width: min(980px, 100%);
+  max-height: min(86vh, 860px);
+  display: grid;
+  gap: 16px;
+  overflow: auto;
+}
+
 .modal-head {
   display: flex;
   align-items: start;
@@ -309,6 +317,73 @@ h2 {
 .modal-head h2 {
   margin-bottom: 0;
   font-size: 2rem;
+}
+
+.preview-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 0.9fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.preview-media {
+  display: grid;
+  gap: 10px;
+}
+
+.preview-media > img {
+  width: 100%;
+  height: min(52vh, 460px);
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.26);
+}
+
+.preview-thumbs {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.preview-thumbs button {
+  flex: 0 0 72px;
+  height: 58px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.preview-thumbs button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px rgba(255, 122, 24, 0.32);
+}
+
+.preview-thumbs img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.preview-details {
+  display: grid;
+  gap: 12px;
+}
+
+.preview-details > strong {
+  width: fit-content;
+  border-radius: 8px;
+  padding: 0.72rem 0.9rem;
+  background: rgba(255, 122, 24, 0.14);
+  color: #ffb064;
+  font-size: 1.15rem;
+}
+
+.preview-details p {
+  margin-bottom: 0;
+  line-height: 1.55;
 }
 
 .auth-tabs {
@@ -626,11 +701,41 @@ h2 {
   color: var(--brand);
 }
 
+.directory-slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  align-items: center;
+  border: 1px solid rgba(111, 44, 255, 0.26);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background:
+    radial-gradient(circle at 96% 20%, rgba(255, 122, 24, 0.16), transparent 32%),
+    rgba(255, 255, 255, 0.06);
+  color: var(--ink);
+  font-weight: 900;
+}
+
+.directory-slider span {
+  color: #ffb064;
+  font-size: 0.82rem;
+}
+
+.directory-slider input {
+  grid-column: 1 / -1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .admin-listings {
   display: grid;
+  align-content: start;
   gap: 10px;
   overflow: auto;
+  max-height: var(--directory-list-height, 520px);
   padding-right: 4px;
+  scrollbar-color: rgba(255, 122, 24, 0.72) rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
 }
 
 .directory-item {
@@ -1235,6 +1340,7 @@ h2 {
   .hub,
   .split,
   .admin-dashboard,
+  .preview-grid,
   .wheel-panel,
   .game,
   .listing,

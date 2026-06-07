@@ -185,6 +185,10 @@
                 </label>
                 <button class="secondary" id="selectAllListings" type="button">Tout sélectionner</button>
               </div>
+              <label class="directory-slider">Hauteur du répertoire
+                <span id="directoryHeightValue">520px</span>
+                <input id="directoryHeight" type="range" min="280" max="820" step="20" value="520" />
+              </label>
               <div id="adminListings" class="admin-listings"></div>
               <div class="trash-bin">
                 <div class="directory-head">
@@ -330,6 +334,30 @@
           <button id="authSubmit">Se connecter</button>
           <p class="note" id="authMessage"></p>
         </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop hidden" id="listingPreviewModal" role="dialog" aria-modal="true" aria-labelledby="previewTitle">
+      <section class="listing-preview panel">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow" id="previewEyebrow">Prévisualisation</p>
+            <h2 id="previewTitle">Annonce</h2>
+          </div>
+          <button class="ghost tiny" id="closePreview" type="button">Fermer</button>
+        </div>
+        <div class="preview-grid">
+          <div class="preview-media">
+            <img id="previewImage" alt="Image de l'annonce" />
+            <div id="previewThumbs" class="preview-thumbs"></div>
+          </div>
+          <div class="preview-details">
+            <strong id="previewPrice"></strong>
+            <p id="previewLocation" class="location"></p>
+            <p id="previewDescription"></p>
+            <div id="previewMeta" class="meta preview-meta"></div>
+          </div>
+        </div>
       </section>
     </div>
     <script src="/app.js"></script>

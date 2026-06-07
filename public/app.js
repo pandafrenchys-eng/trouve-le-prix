@@ -116,6 +116,7 @@ function listingRow(listing, mode) {
       <select class="rating-control" data-rating="${listing.id}" ${mode === "trash" ? "disabled" : ""}>
         ${[0, 1, 2, 3, 4, 5].map((value) => `<option value="${value}" ${Number(listing.rating) === value ? "selected" : ""}>${value ? `${value}/5` : "Note"}</option>`).join("")}
       </select>
+      <button class="tiny secondary preview-listing" type="button" data-preview="${listing.id}" data-preview-mode="${mode}">Prévisualiser</button>
       ${mode !== "trash" && pending ? `<button class="tiny validate-import" type="button" data-validate="${listing.id}">Valider +100$</button>` : ""}
     </div>`;
 }
@@ -127,6 +128,39 @@ function renderAdminListings() {
   $("adminStats").textContent = `Catalogue : ${state.adminListings.length} active(s), ${state.trashListings.length} en corbeille`;
   $("adminListings").innerHTML = activeRows.length ? activeRows.map((listing) => listingRow(listing, "active")).join("") : `<p class="note">Aucune annonce ne correspond au tri actuel.</p>`;
   $("trashListings").innerHTML = state.trashListings.length ? state.trashListings.map((listing) => listingRow(listing, "trash")).join("") : `<p class="note">La corbeille est vide.</p>`;
+}
+
+function applyDirectoryHeight(value = $("directoryHeight")?.value || 520) {
+  const height = Math.max(280, Math.min(820, Number(value) || 520));
+  document.documentElement.style.setProperty("--directory-list-height", `${height}px`);
+  if ($("directoryHeight")) $("directoryHeight").value = height;
+  if ($("directoryHeightValue")) $("directoryHeightValue").textContent = `${height}px`;
+  localStorage.setItem("marketDirectoryHeight", String(height));
+}
+
+function previewListing(id, mode = "active", imageIndex = 0) {
+  const source = mode === "trash" ? state.trashListings : state.adminListings;
+  const listing = source.find((item) => item.id === id);
+  if (!listing) return;
+  const images = Array.isArray(listing.images) ? listing.images.filter(Boolean) : [];
+  const selectedImage = images[imageIndex] || images[0] || "";
+  $("previewEyebrow").textContent = `${listing.category} · ${listing.source}`;
+  $("previewTitle").textContent = listing.title;
+  $("previewImage").src = selectedImage;
+  $("previewPrice").textContent = `Prix réel : ${euro.format(listing.actualPrice || 0)}`;
+  $("previewLocation").textContent = listing.location || "Localisation inconnue";
+  $("previewDescription").textContent = listing.description || "Aucune description détectée.";
+  $("previewMeta").innerHTML = Object.entries(listing.metadata || {})
+    .map(([key, value]) => `<div><span>${key}</span><strong>${value}</strong></div>`)
+    .join("") || `<div><span>Statut</span><strong>${listing.validationStatus === "pending" ? "En attente" : "Validée"}</strong></div>`;
+  $("previewThumbs").innerHTML = images
+    .map((image, index) => `<button type="button" class="${image === selectedImage ? "active" : ""}" data-preview-thumb="${listing.id}" data-preview-mode="${mode}" data-preview-image="${index}"><img src="${image}" alt="" /></button>`)
+    .join("");
+  $("listingPreviewModal").classList.remove("hidden");
+}
+
+function closePreview() {
+  $("listingPreviewModal").classList.add("hidden");
 }
 
 function selectedIds(kind) {
@@ -692,6 +726,7 @@ $("adminGate").addEventListener("submit", async (event) => {
 $("refreshListings").addEventListener("click", refreshAdminListings);
 $("listingSort").addEventListener("change", renderAdminListings);
 $("listingFilter").addEventListener("change", renderAdminListings);
+$("directoryHeight").addEventListener("input", (event) => applyDirectoryHeight(event.target.value));
 $("selectAllListings").addEventListener("click", () => {
   const rows = sortedAndFilteredListings();
   const allSelected = rows.length && rows.every((listing) => state.selectedListings.has(listing.id));
@@ -721,6 +756,11 @@ $("adminListings").addEventListener("change", async (event) => {
 });
 
 $("adminListings").addEventListener("click", async (event) => {
+  const previewId = event.target.closest("[data-preview]")?.dataset.preview;
+  if (previewId) {
+    previewListing(previewId, event.target.closest("[data-preview]")?.dataset.previewMode || "active");
+    return;
+  }
   const validateId = event.target.closest("[data-validate]")?.dataset.validate;
   if (!validateId) return;
   try {
@@ -741,6 +781,22 @@ $("trashListings").addEventListener("change", (event) => {
   if (!selectId) return;
   if (event.target.checked) state.selectedTrash.add(selectId);
   else state.selectedTrash.delete(selectId);
+});
+
+$("trashListings").addEventListener("click", (event) => {
+  const previewId = event.target.closest("[data-preview]")?.dataset.preview;
+  if (previewId) previewListing(previewId, event.target.closest("[data-preview]")?.dataset.previewMode || "trash");
+});
+
+$("previewThumbs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-preview-thumb]");
+  if (!button) return;
+  previewListing(button.dataset.previewThumb, button.dataset.previewMode, Number(button.dataset.previewImage) || 0);
+});
+
+$("closePreview").addEventListener("click", closePreview);
+$("listingPreviewModal").addEventListener("click", (event) => {
+  if (event.target.id === "listingPreviewModal") closePreview();
 });
 
 $("trashSelected").addEventListener("click", () => bulkListingAction("/api/listings/trash", selectedIds("active")));
@@ -842,6 +898,7 @@ $("htmlImportForm").addEventListener("submit", async (event) => {
 initCategories();
 refreshCatalogStatus();
 renderAccount();
+applyDirectoryHeight(localStorage.getItem("marketDirectoryHeight") || 520);
 
 $("spinWheel").addEventListener("click", () => {
   if (!state.account) {
