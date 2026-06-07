@@ -64,9 +64,9 @@ function initCategories() {
 async function refreshCatalogStatus() {
   try {
     const status = await api("/api/listings/status");
-    $("catalogStatus").textContent = `Catalogue réel : ${status.authorized} annonce(s), dont ${status.imported} importée(s).`;
+    $("catalogStatus").textContent = `Catalogue serveur partagé : ${status.authorized} annonce(s) jouable(s), dont ${status.imported} importée(s). Visible pour tous les joueurs après validation admin.`;
   } catch (error) {
-    $("catalogStatus").textContent = "Catalogue réel : impossible à lire.";
+    $("catalogStatus").textContent = "Catalogue serveur partagé : impossible à lire.";
   }
 }
 
@@ -125,7 +125,7 @@ function renderAdminListings() {
   const activeRows = sortedAndFilteredListings();
   $("directoryCount").textContent = activeRows.length;
   $("trashCount").textContent = state.trashListings.length;
-  $("adminStats").textContent = `Catalogue : ${state.adminListings.length} active(s), ${state.trashListings.length} en corbeille`;
+  $("adminStats").textContent = `Catalogue serveur : ${state.adminListings.length} active(s), ${state.trashListings.length} en corbeille`;
   $("adminListings").innerHTML = activeRows.length ? activeRows.map((listing) => listingRow(listing, "active")).join("") : `<p class="note">Aucune annonce ne correspond au tri actuel.</p>`;
   $("trashListings").innerHTML = state.trashListings.length ? state.trashListings.map((listing) => listingRow(listing, "trash")).join("") : `<p class="note">La corbeille est vide.</p>`;
 }
@@ -210,6 +210,11 @@ function saveAccount(account) {
     const users = storedUsers();
     users[account.email] = account;
     saveUsers(users);
+    fetch("/api/accounts/update", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(account)
+    }).catch(() => {});
   }
   renderAccount();
   if ($("wheelMenu") && !$("wheelMenu").classList.contains("hidden")) renderWheel();
@@ -824,44 +829,50 @@ $("registerTab").addEventListener("click", () => {
   authMode = "register";
   renderAuthMode();
 });
-$("authForm").addEventListener("submit", (event) => {
+$("authForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = $("authEmail").value.trim().toLowerCase();
   const password = $("authPassword").value;
   const users = storedUsers();
 
   if (authMode === "register") {
-    if (users[email]) {
-      $("authMessage").textContent = "Un compte existe déjà avec cet email.";
-      return;
-    }
     const username = $("authUsername").value.trim() || email.split("@")[0] || "Joueur";
-    const account = {
-      email,
-      username,
-      password,
-      money: 0,
-      closestWins: 0,
-      wins: 0,
-      guesses: 0,
-      goldTickets: 0
-    };
-    users[email] = account;
-    saveUsers(users);
-    saveAccount(account);
-    $("status").textContent = "Compte créé";
-    closeAuth();
+    try {
+      const data = await api("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email, username, password })
+      });
+      users[email] = { ...data.account, password };
+      saveUsers(users);
+      saveAccount(data.account);
+      $("status").textContent = "Compte créé";
+      closeAuth();
+    } catch (error) {
+      $("authMessage").textContent = error.message;
+    }
     return;
   }
 
-  const account = users[email];
-  if (!account || account.password !== password) {
-    $("authMessage").textContent = "Email ou mot de passe incorrect.";
-    return;
+  try {
+    const data = await api("/api/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password, username: users[email]?.username })
+    });
+    users[email] = { ...data.account, password };
+    saveUsers(users);
+    saveAccount(data.account);
+    $("status").textContent = "Connecté";
+    closeAuth();
+  } catch (error) {
+    const localAccount = users[email];
+    if (localAccount && localAccount.password === password) {
+      saveAccount(localAccount);
+      $("status").textContent = "Connecté";
+      closeAuth();
+      return;
+    }
+    $("authMessage").textContent = error.message || "Email ou mot de passe incorrect.";
   }
-  saveAccount(account);
-  $("status").textContent = "Connecté";
-  closeAuth();
 });
 
 $("adminNotebook").value = localStorage.getItem("marketAdminNotebook") || "";

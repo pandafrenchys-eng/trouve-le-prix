@@ -8,6 +8,7 @@ const HOST = process.env.HOST || "0.0.0.0";
 const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_DIR = path.join(__dirname, "data");
 const IMPORTED_LISTINGS_FILE = path.join(DATA_DIR, "leboncoin-listings.json");
+const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
 
 const baseListings = [
@@ -248,6 +249,7 @@ const players = new Map();
 let authorizedListings = [];
 let feedListings = [];
 let importedListings = [];
+let accounts = {};
 const listingVotes = new Map();
 let authorizedListingsUpdatedAt = null;
 
@@ -272,6 +274,60 @@ function readBody(req) {
       }
     });
   });
+}
+
+function publicAccount(account) {
+  if (!account) return null;
+  return {
+    email: account.email,
+    username: account.username,
+    money: Number(account.money) || 0,
+    closestWins: Number(account.closestWins) || 0,
+    wins: Number(account.wins) || 0,
+    guesses: Number(account.guesses) || 0,
+    goldTickets: Number(account.goldTickets) || 0
+  };
+}
+
+function normalizeAccount(raw = {}) {
+  const email = String(raw.email || "").trim().toLowerCase();
+  return {
+    email,
+    username: String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18),
+    password: String(raw.password || ""),
+    money: Number(raw.money) || 0,
+    closestWins: Number(raw.closestWins) || 0,
+    wins: Number(raw.wins) || 0,
+    guesses: Number(raw.guesses) || 0,
+    goldTickets: Number(raw.goldTickets) || 0
+  };
+}
+
+async function loadAccounts() {
+  try {
+    const payload = JSON.parse(await fs.promises.readFile(ACCOUNTS_FILE, "utf8"));
+    accounts = Object.fromEntries(
+      Object.entries(payload.accounts || payload || {})
+        .map(([email, account]) => [email.toLowerCase(), normalizeAccount({ ...account, email: account.email || email })])
+        .filter(([email]) => email)
+    );
+    console.log(`Loaded ${Object.keys(accounts).length} player accounts`);
+  } catch (error) {
+    if (error.code !== "ENOENT") console.warn(`Could not load accounts: ${error.message}`);
+  }
+}
+
+async function saveAccounts() {
+  await fs.promises.mkdir(DATA_DIR, { recursive: true });
+  await fs.promises.writeFile(ACCOUNTS_FILE, JSON.stringify({ accounts }, null, 2), "utf8");
+}
+
+async function creditAccount(email, amount) {
+  const key = String(email || "").trim().toLowerCase();
+  if (!key || !accounts[key]) return null;
+  accounts[key].money = (Number(accounts[key].money) || 0) + amount;
+  await saveAccounts();
+  return publicAccount(accounts[key]);
 }
 
 function publicListing(listing) {
@@ -721,6 +777,50 @@ const server = http.createServer(async (req, res) => {
   }
   if (!url.pathname.startsWith("/api/")) return serveStatic(req, res);
 
+  if (req.method === "POST" && url.pathname === "/api/auth/register") {
+    const body = await readBody(req);
+    const account = normalizeAccount(body);
+    if (!account.email || !account.email.includes("@")) return json(res, 400, { error: "Email invalide" });
+    if (!account.password || account.password.length < 4) return json(res, 400, { error: "Mot de passe trop court" });
+    if (accounts[account.email]) return json(res, 409, { error: "Un compte existe déjà avec cet email" });
+    accounts[account.email] = account;
+    await saveAccounts();
+    return json(res, 201, { account: publicAccount(account) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/auth/login") {
+    const body = await readBody(req);
+    const email = String(body.email || "").trim().toLowerCase();
+    let account = accounts[email];
+    if (!account && email && email.includes("@") && String(body.password || "").length >= 4) {
+      account = normalizeAccount({ email, password: body.password, username: body.username || email.split("@")[0] });
+      accounts[email] = account;
+      await saveAccounts();
+    }
+    if (!account || account.password !== String(body.password || "")) {
+      return json(res, 401, { error: "Email ou mot de passe incorrect" });
+    }
+    return json(res, 200, { account: publicAccount(account) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/accounts/update") {
+    const body = await readBody(req);
+    const incoming = normalizeAccount(body);
+    if (!incoming.email || !accounts[incoming.email]) return json(res, 404, { error: "Compte introuvable" });
+    const current = accounts[incoming.email];
+    accounts[incoming.email] = {
+      ...current,
+      username: incoming.username || current.username,
+      money: Math.max(Number(current.money) || 0, Number(incoming.money) || 0),
+      closestWins: Math.max(Number(current.closestWins) || 0, Number(incoming.closestWins) || 0),
+      wins: Math.max(Number(current.wins) || 0, Number(incoming.wins) || 0),
+      guesses: Math.max(Number(current.guesses) || 0, Number(incoming.guesses) || 0),
+      goldTickets: Math.max(Number(current.goldTickets) || 0, Number(incoming.goldTickets) || 0)
+    };
+    await saveAccounts();
+    return json(res, 200, { account: publicAccount(accounts[incoming.email]) });
+  }
+
   if (req.method === "POST" && url.pathname === "/api/rooms") {
     const body = await readBody(req);
     const player = createPlayer(body.name);
@@ -731,6 +831,9 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/listings/status") {
     return json(res, 200, {
       total: availableListings().length,
+      storage: "server",
+      sharedCatalog: true,
+      persistence: "data/leboncoin-listings.json",
       demo: ALLOW_DEMO_LISTINGS ? listings.length : 0,
       demoAvailableIfEnabled: listings.length,
       demoEnabled: ALLOW_DEMO_LISTINGS,
@@ -787,7 +890,10 @@ const server = http.createServer(async (req, res) => {
 
     listing.validationStatus = "approved";
     listing.validatedAt = new Date().toISOString();
-    if (reward) listing.rewardGranted = true;
+    if (reward) {
+      listing.rewardGranted = true;
+      await creditAccount(reward.email, reward.amount);
+    }
     rebuildAuthorizedListings();
     await saveImportedListings();
     return json(res, 200, { listing, reward, total: authorizedListings.length });
@@ -1138,9 +1244,10 @@ const server = http.createServer(async (req, res) => {
   json(res, 404, { error: "Route inconnue" });
 });
 
-server.listen(PORT, HOST, () => {
-  loadImportedListings();
-  refreshAuthorizedListings();
+server.listen(PORT, HOST, async () => {
+  await loadAccounts();
+  await loadImportedListings();
+  await refreshAuthorizedListings();
   setInterval(refreshAuthorizedListings, 10 * 60 * 1000).unref();
   console.log(`Market Master running on http://${HOST}:${PORT}`);
 });
