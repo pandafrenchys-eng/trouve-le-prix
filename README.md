@@ -115,6 +115,32 @@ Le serveur utilise automatiquement `process.env.PORT` et ecoute sur `0.0.0.0`, c
 7. Variables :
    - `NODE_ENV=production`
    - `ALLOW_DEMO_LISTINGS=false`
+   - `DATABASE_URL=<url PostgreSQL>`
+
+### Persistance des annonces sur Render
+
+Render ne garantit pas la conservation des fichiers crees par l'application sur le disque local. Si le jeu sauvegarde les annonces uniquement dans `data/leboncoin-listings.json`, elles peuvent disparaitre apres un redeploiement ou un redemarrage.
+
+Pour garder les annonces importees, les comptes, l'argent et les tickets d'or :
+
+1. Creer une base PostgreSQL sur Render, Supabase, Neon ou Railway.
+2. Copier l'URL de connexion PostgreSQL.
+3. Ajouter cette URL dans les variables d'environnement du service Render :
+   - cle : `DATABASE_URL`
+   - valeur : l'URL PostgreSQL complete
+4. Redeployer le service.
+5. Verifier `https://votre-site.onrender.com/api/listings/status`.
+
+Quand la base est bien branchee, le statut indique :
+
+```json
+{
+  "storage": "postgresql",
+  "persistentOnRender": true
+}
+```
+
+Sans `DATABASE_URL`, le serveur reste compatible localement mais le statut indique `storage: "server-file"`, ce qui n'est pas fiable sur Render.
 
 Le fichier `render.yaml` est deja inclus pour faciliter un deploiement Blueprint.
 
@@ -132,8 +158,8 @@ Le fichier `railway.json` est deja inclus.
 
 - Les salons et joueurs sont en memoire serveur : il faut une seule instance active.
 - Si le serveur redemarre, les salons en cours disparaissent.
-- Les annonces importees sont sauvegardees dans `data/leboncoin-listings.json`; sur certains hebergeurs gratuits, les changements peuvent etre perdus au redemarrage si le disque n'est pas persistant.
-- Pour une vraie production, il faudra PostgreSQL pour les annonces/comptes/stats et Redis pour les salons.
+- Les annonces importees et les comptes sont sauvegardes dans PostgreSQL si `DATABASE_URL` est configure. Sinon, ils restent sauvegardes en fichiers locaux pour le developpement.
+- Pour une vraie production, il faudra aussi Redis pour les salons actifs.
 
 ## Evolution technique recommandee
 

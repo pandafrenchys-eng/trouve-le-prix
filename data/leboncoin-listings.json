@@ -1,6 +1,27 @@
 {
   "listings": [
     {
+      "id": "lbc-607bb6882f65",
+      "source": "Leboncoin - import automatique",
+      "category": "Mode",
+      "title": "Drone dji mini 3",
+      "description": "drone dji mini 3 petit impact mais qui empêche pas de voler (coque supérieur peut être changé pour plus d’esthétique) vendu avec tous les accessoires + le sac de rangement + carte SD 128go jamais utilisé encore sous garantie jusqu’en 2028 remise en main propre uniquement",
+      "location": "Localisation non détectée",
+      "actualPrice": 250,
+      "images": [
+        "https://img.leboncoin.fr/api/v1/lbcpb1/images/9b/01/39/9b0139df5e2c47253b2df3f0b69a0278d8ce02da.jpg?rule=ad-image"
+      ],
+      "createdAt": "2026-06-07T19:28:54.673Z",
+      "rating": 0,
+      "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T19:29:01.025Z",
+      "importerEmail": "tazdelamor@hotmail.com",
+      "importerName": "MMADMIN",
+      "rewardGranted": true,
+      "metadata": {}
+    },
+    {
       "id": "lbc-733541bc35fb",
       "source": "Leboncoin - import automatique",
       "category": "Maison",

@@ -11,3 +11,5 @@ services:
         value: production
       - key: ALLOW_DEMO_LISTINGS
         value: false
+      - key: DATABASE_URL
+        sync: false

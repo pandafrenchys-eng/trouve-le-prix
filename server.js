@@ -10,6 +10,7 @@ const DATA_DIR = path.join(__dirname, "data");
 const IMPORTED_LISTINGS_FILE = path.join(DATA_DIR, "leboncoin-listings.json");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
+const DATABASE_URL = process.env.DATABASE_URL;
 
 const baseListings = [
   {
@@ -250,6 +251,7 @@ let authorizedListings = [];
 let feedListings = [];
 let importedListings = [];
 let accounts = {};
+let dbPool = null;
 const listingVotes = new Map();
 let authorizedListingsUpdatedAt = null;
 
@@ -274,6 +276,46 @@ function readBody(req) {
       }
     });
   });
+}
+
+async function initDatabase() {
+  if (!DATABASE_URL) return;
+  try {
+    const { Pool } = require("pg");
+    dbPool = new Pool({
+      connectionString: DATABASE_URL,
+      ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: false }
+    });
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS app_state (
+        key TEXT PRIMARY KEY,
+        payload JSONB NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log("PostgreSQL persistence enabled");
+  } catch (error) {
+    dbPool = null;
+    console.warn(`PostgreSQL persistence disabled: ${error.message}`);
+  }
+}
+
+async function loadServerState(key) {
+  if (!dbPool) return null;
+  const result = await dbPool.query("SELECT payload FROM app_state WHERE key = $1", [key]);
+  return result.rows[0]?.payload || null;
+}
+
+async function saveServerState(key, payload) {
+  if (!dbPool) return false;
+  await dbPool.query(
+    `INSERT INTO app_state (key, payload, updated_at)
+     VALUES ($1, $2::jsonb, NOW())
+     ON CONFLICT (key)
+     DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+    [key, JSON.stringify(payload)]
+  );
+  return true;
 }
 
 function publicAccount(account) {
@@ -304,6 +346,17 @@ function normalizeAccount(raw = {}) {
 }
 
 async function loadAccounts() {
+  const stored = await loadServerState("accounts");
+  if (stored) {
+    accounts = Object.fromEntries(
+      Object.entries(stored.accounts || stored || {})
+        .map(([email, account]) => [email.toLowerCase(), normalizeAccount({ ...account, email: account.email || email })])
+        .filter(([email]) => email)
+    );
+    console.log(`Loaded ${Object.keys(accounts).length} player accounts from PostgreSQL`);
+    return;
+  }
+
   try {
     const payload = JSON.parse(await fs.promises.readFile(ACCOUNTS_FILE, "utf8"));
     accounts = Object.fromEntries(
@@ -312,12 +365,14 @@ async function loadAccounts() {
         .filter(([email]) => email)
     );
     console.log(`Loaded ${Object.keys(accounts).length} player accounts`);
+    if (dbPool) await saveAccounts();
   } catch (error) {
     if (error.code !== "ENOENT") console.warn(`Could not load accounts: ${error.message}`);
   }
 }
 
 async function saveAccounts() {
+  if (await saveServerState("accounts", { accounts })) return;
   await fs.promises.mkdir(DATA_DIR, { recursive: true });
   await fs.promises.writeFile(ACCOUNTS_FILE, JSON.stringify({ accounts }, null, 2), "utf8");
 }
@@ -549,18 +604,29 @@ function rebuildAuthorizedListings() {
 }
 
 async function loadImportedListings() {
+  const stored = await loadServerState("listings");
+  if (stored) {
+    const rows = Array.isArray(stored) ? stored : stored.listings;
+    importedListings = Array.isArray(rows) ? rows.map(normalizeListing).filter(Boolean) : [];
+    rebuildAuthorizedListings();
+    console.log(`Loaded ${importedListings.length} imported Leboncoin listings from PostgreSQL`);
+    return;
+  }
+
   try {
     const payload = JSON.parse(await fs.promises.readFile(IMPORTED_LISTINGS_FILE, "utf8"));
     const rows = Array.isArray(payload) ? payload : payload.listings;
     importedListings = Array.isArray(rows) ? rows.map(normalizeListing).filter(Boolean) : [];
     rebuildAuthorizedListings();
     console.log(`Loaded ${importedListings.length} imported Leboncoin listings`);
+    if (dbPool) await saveImportedListings();
   } catch (error) {
     if (error.code !== "ENOENT") console.warn(`Could not load imported listings: ${error.message}`);
   }
 }
 
 async function saveImportedListings() {
+  if (await saveServerState("listings", { listings: importedListings })) return;
   await fs.promises.mkdir(DATA_DIR, { recursive: true });
   await fs.promises.writeFile(
     IMPORTED_LISTINGS_FILE,
@@ -831,9 +897,10 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/listings/status") {
     return json(res, 200, {
       total: availableListings().length,
-      storage: "server",
+      storage: dbPool ? "postgresql" : "server-file",
       sharedCatalog: true,
-      persistence: "data/leboncoin-listings.json",
+      persistence: dbPool ? "DATABASE_URL" : "data/leboncoin-listings.json",
+      persistentOnRender: Boolean(dbPool),
       demo: ALLOW_DEMO_LISTINGS ? listings.length : 0,
       demoAvailableIfEnabled: listings.length,
       demoEnabled: ALLOW_DEMO_LISTINGS,
@@ -1245,6 +1312,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, HOST, async () => {
+  await initDatabase();
   await loadAccounts();
   await loadImportedListings();
   await refreshAuthorizedListings();
