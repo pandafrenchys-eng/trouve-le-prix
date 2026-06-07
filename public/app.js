@@ -15,7 +15,8 @@ const state = {
   finalRenderKey: null,
   imageListingId: null,
   imageIndex: 0,
-  wheelRotation: 0
+  wheelRotation: 0,
+  accountSyncAt: 0
 };
 
 const $ = (id) => document.getElementById(id);
@@ -224,14 +225,34 @@ function saveAccount(account) {
     const users = storedUsers();
     users[account.email] = account;
     saveUsers(users);
-    fetch("/api/accounts/update", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(account)
-    }).catch(() => {});
   }
   renderAccount();
+  renderAccountSettings();
   if ($("wheelMenu") && !$("wheelMenu").classList.contains("hidden")) renderWheel();
+}
+
+async function refreshAccountFromServer() {
+  if (!state.account?.email) return null;
+  try {
+    const data = await api(`/api/accounts/${encodeURIComponent(state.account.email)}`);
+    saveAccount(data.account);
+    return data.account;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function applyAccountStatEvent(payload) {
+  if (!state.account?.email) return;
+  try {
+    const data = await api("/api/accounts/stats", {
+      method: "POST",
+      body: JSON.stringify({ ...payload, email: state.account.email })
+    });
+    saveAccount(data.account);
+  } catch (error) {
+    showError(error);
+  }
 }
 
 function openAuth(mode = "login") {
@@ -276,7 +297,10 @@ function renderAccount() {
   $("accountCard").innerHTML = `
     <div class="account-name">
       <strong>${account.username}</strong>
-      <button class="tiny secondary" id="logoutAccount" type="button">Sortir</button>
+      <div class="account-buttons">
+        <button class="tiny secondary" id="openAccountSettings" type="button">Compte</button>
+        <button class="tiny secondary" id="logoutAccount" type="button">Sortir</button>
+      </div>
     </div>
     <div class="account-stats">
       <span>Argent ${account.money || 0}$</span>
@@ -284,11 +308,44 @@ function renderAccount() {
       <span>Ratio ${ratio}%</span>
       <span>Victoires ${account.wins || 0}</span>
     </div>`;
+  $("openAccountSettings").addEventListener("click", openAccountSettings);
   $("logoutAccount").addEventListener("click", () => {
     localStorage.removeItem("marketAccount");
     state.account = null;
     renderAccount();
   });
+}
+
+function renderAccountSettings() {
+  if (!$("accountSettingsBody")) return;
+  const account = state.account;
+  if (!account) {
+    $("accountSettingsBody").innerHTML = `<p class="note">Connecte-toi pour afficher les paramètres du compte.</p>`;
+    return;
+  }
+  const ratio = account.guesses ? Math.round((account.closestWins / account.guesses) * 100) : 0;
+  $("accountSettingsBody").innerHTML = `
+    <div class="account-settings-grid">
+      <div class="setting-line"><span>Pseudo</span><strong>${account.username}</strong></div>
+      <div class="setting-line"><span>Email associé</span><strong>${account.email}</strong></div>
+      <div class="setting-stat"><span>Argent</span><strong>${account.money || 0}$</strong></div>
+      <div class="setting-stat"><span>Tickets d'or</span><strong>${account.goldTickets || 0}</strong></div>
+      <div class="setting-stat"><span>Ratio plus proche</span><strong>${ratio}%</strong></div>
+      <div class="setting-stat"><span>Victoires</span><strong>${account.wins || 0}</strong></div>
+      <div class="setting-stat"><span>Guesses joués</span><strong>${account.guesses || 0}</strong></div>
+      <div class="setting-stat"><span>Meilleur guess</span><strong>${account.closestWins || 0}</strong></div>
+    </div>
+    <p class="note">Ces statistiques sont sauvegardées côté serveur et suivent ton compte sur tous tes appareils.</p>`;
+}
+
+async function openAccountSettings() {
+  $("accountSettingsModal").classList.remove("hidden");
+  renderAccountSettings();
+  await refreshAccountFromServer();
+}
+
+function closeAccountSettings() {
+  $("accountSettingsModal").classList.add("hidden");
 }
 
 function savePlayer(player) {
@@ -298,11 +355,9 @@ function savePlayer(player) {
 
 function syncAccountFromRoom(room) {
   if (!state.account || !state.player) return;
-  const current = room.players?.find((player) => player.id === state.player.id);
-  if (!current) return;
-  state.account.money = Math.max(state.account.money || 0, current.wallet || 0);
-  state.account.wins = Math.max(state.account.wins || 0, current.wins || 0);
-  saveAccount(state.account);
+  if (Date.now() - state.accountSyncAt < 10000) return;
+  state.accountSyncAt = Date.now();
+  refreshAccountFromServer();
 }
 
 function recordRoundStats(round) {
@@ -311,11 +366,15 @@ function recordRoundStats(round) {
   if (state.processedRounds.has(key)) return;
   const myRank = round.results.findIndex((result) => result.playerId === state.player.id);
   if (myRank < 0) return;
+  const myResult = round.results[myRank];
   state.processedRounds.add(key);
-  state.account.guesses = (state.account.guesses || 0) + 1;
-  if (myRank === 0) state.account.closestWins = (state.account.closestWins || 0) + 1;
   localStorage.setItem("marketProcessedRounds", JSON.stringify([...state.processedRounds]));
-  saveAccount(state.account);
+  applyAccountStatEvent({
+    type: "round",
+    eventId: `round:${key}:${state.player.id}`,
+    closest: myRank === 0,
+    money: myResult?.prize || 0
+  });
 }
 
 function awardFinalWin(room) {
@@ -325,22 +384,14 @@ function awardFinalWin(room) {
   const key = `${room.id}-${room.sessionNumber || 0}`;
   if (state.processedGameWins.has(key)) return;
   state.processedGameWins.add(key);
-  state.account.goldTickets = (state.account.goldTickets || 0) + 1;
   localStorage.setItem("marketProcessedGameWins", JSON.stringify([...state.processedGameWins]));
-  saveAccount(state.account);
+  applyAccountStatEvent({ type: "game-win", eventId: `game-win:${key}:${state.player.id}` });
   $("status").textContent = "Partie gagnée : +1 ticket d'or";
 }
 
 function applyImportReward(reward) {
   if (!reward?.email) return;
-  const users = storedUsers();
-  const account = users[reward.email];
-  if (account) {
-    account.money = (Number(account.money) || 0) + (Number(reward.amount) || 0);
-    users[reward.email] = account;
-    saveUsers(users);
-    if (state.account?.email === reward.email) saveAccount(account);
-  }
+  if (state.account?.email === reward.email) refreshAccountFromServer();
   $("status").textContent = `${reward.username || reward.email} reçoit +${reward.amount}$ pour l'import validé.`;
 }
 
@@ -837,6 +888,10 @@ $("closeAuth").addEventListener("click", closeAuth);
 $("authModal").addEventListener("click", (event) => {
   if (event.target.id === "authModal") closeAuth();
 });
+$("closeAccountSettings").addEventListener("click", closeAccountSettings);
+$("accountSettingsModal").addEventListener("click", (event) => {
+  if (event.target.id === "accountSettingsModal") closeAccountSettings();
+});
 $("loginTab").addEventListener("click", () => {
   authMode = "login";
   renderAuthMode();
@@ -927,9 +982,10 @@ refreshCatalogStatus();
 refreshGlobalStats();
 setInterval(refreshGlobalStats, 10000);
 renderAccount();
+refreshAccountFromServer();
 applyDirectoryHeight(localStorage.getItem("marketDirectoryHeight") || 520);
 
-$("spinWheel").addEventListener("click", () => {
+$("spinWheel").addEventListener("click", async () => {
   if (!state.account) {
     openAuth("login");
     return;
@@ -938,12 +994,20 @@ $("spinWheel").addEventListener("click", () => {
     $("wheelResult").textContent = "Il te faut 1 ticket d'or pour lancer la roue.";
     return;
   }
-  const amounts = [200, 250, 300, 350, 400, 450, 500, 550, 600];
-  const amount = amounts[Math.floor(Math.random() * amounts.length)];
-  state.account.goldTickets -= 1;
-  state.account.money = (state.account.money || 0) + amount;
-  state.wheelRotation += 1080 + Math.floor(Math.random() * 720);
-  $("chanceWheel").style.transform = `rotate(${state.wheelRotation}deg)`;
-  $("wheelResult").textContent = `La roue s'arrête sur ${amount}$ : gain ajouté au compte.`;
-  saveAccount(state.account);
+  try {
+    $("spinWheel").disabled = true;
+    const data = await api("/api/accounts/spin-wheel", {
+      method: "POST",
+      body: JSON.stringify({ email: state.account.email })
+    });
+    state.wheelRotation += 1080 + Math.floor(Math.random() * 720);
+    $("chanceWheel").style.transform = `rotate(${state.wheelRotation}deg)`;
+    $("wheelResult").textContent = `La roue s'arrête sur ${data.amount}$ : gain sauvegardé sur ton compte.`;
+    saveAccount(data.account);
+  } catch (error) {
+    showError(error);
+    $("wheelResult").textContent = error.message;
+  } finally {
+    renderWheel();
+  }
 });

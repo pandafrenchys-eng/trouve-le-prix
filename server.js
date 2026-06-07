@@ -389,8 +389,19 @@ function normalizeAccount(raw = {}) {
     closestWins: Number(raw.closestWins) || 0,
     wins: Number(raw.wins) || 0,
     guesses: Number(raw.guesses) || 0,
-    goldTickets: Number(raw.goldTickets) || 0
+    goldTickets: Number(raw.goldTickets) || 0,
+    processedEvents: raw.processedEvents && typeof raw.processedEvents === "object" ? raw.processedEvents : {}
   };
+}
+
+function eventAlreadyApplied(account, eventId) {
+  if (!eventId) return false;
+  account.processedEvents ||= {};
+  if (account.processedEvents[eventId]) return true;
+  account.processedEvents[eventId] = new Date().toISOString();
+  const entries = Object.entries(account.processedEvents).slice(-500);
+  account.processedEvents = Object.fromEntries(entries);
+  return false;
 }
 
 async function loadAccounts() {
@@ -930,14 +941,56 @@ const server = http.createServer(async (req, res) => {
     accounts[incoming.email] = {
       ...current,
       username: incoming.username || current.username,
-      money: Math.max(Number(current.money) || 0, Number(incoming.money) || 0),
-      closestWins: Math.max(Number(current.closestWins) || 0, Number(incoming.closestWins) || 0),
-      wins: Math.max(Number(current.wins) || 0, Number(incoming.wins) || 0),
-      guesses: Math.max(Number(current.guesses) || 0, Number(incoming.guesses) || 0),
-      goldTickets: Math.max(Number(current.goldTickets) || 0, Number(incoming.goldTickets) || 0)
+      money: Number(current.money) || 0,
+      closestWins: Number(current.closestWins) || 0,
+      wins: Number(current.wins) || 0,
+      guesses: Number(current.guesses) || 0,
+      goldTickets: Number(current.goldTickets) || 0
     };
     await saveAccounts();
     return json(res, 200, { account: publicAccount(accounts[incoming.email]) });
+  }
+
+  if (req.method === "GET" && url.pathname.match(/^\/api\/accounts\/[^/]+$/)) {
+    const email = decodeURIComponent(url.pathname.split("/")[3] || "").trim().toLowerCase();
+    const account = accounts[email];
+    if (!account) return json(res, 404, { error: "Compte introuvable" });
+    return json(res, 200, { account: publicAccount(account) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/accounts/stats") {
+    const body = await readBody(req);
+    const email = String(body.email || "").trim().toLowerCase();
+    const account = accounts[email];
+    if (!account) return json(res, 404, { error: "Compte introuvable" });
+    const eventId = String(body.eventId || "");
+    if (!eventAlreadyApplied(account, eventId)) {
+      if (body.type === "round") {
+        account.money = (Number(account.money) || 0) + Math.max(0, Number(body.money) || 0);
+        account.guesses = (Number(account.guesses) || 0) + 1;
+        if (body.closest) account.closestWins = (Number(account.closestWins) || 0) + 1;
+      }
+      if (body.type === "game-win") {
+        account.wins = (Number(account.wins) || 0) + 1;
+        account.goldTickets = (Number(account.goldTickets) || 0) + 1;
+      }
+      await saveAccounts();
+    }
+    return json(res, 200, { account: publicAccount(account) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/accounts/spin-wheel") {
+    const body = await readBody(req);
+    const email = String(body.email || "").trim().toLowerCase();
+    const account = accounts[email];
+    if (!account) return json(res, 404, { error: "Compte introuvable" });
+    if ((Number(account.goldTickets) || 0) < 1) return json(res, 409, { error: "Il te faut 1 ticket d'or pour lancer la roue." });
+    const amounts = [200, 250, 300, 350, 400, 450, 500, 550, 600];
+    const amount = amounts[Math.floor(Math.random() * amounts.length)];
+    account.goldTickets = (Number(account.goldTickets) || 0) - 1;
+    account.money = (Number(account.money) || 0) + amount;
+    await saveAccounts();
+    return json(res, 200, { amount, account: publicAccount(account) });
   }
 
   if (req.method === "POST" && url.pathname === "/api/rooms") {
