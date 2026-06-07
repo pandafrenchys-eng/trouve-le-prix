@@ -14,11 +14,11 @@
       "createdAt": "2026-06-07T21:12:50.578Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:48.356Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -35,11 +35,11 @@
       "createdAt": "2026-06-07T21:12:15.232Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:49.332Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -56,11 +56,11 @@
       "createdAt": "2026-06-07T21:11:14.152Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:50.269Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -77,11 +77,11 @@
       "createdAt": "2026-06-07T21:10:58.760Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:51.356Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -98,11 +98,11 @@
       "createdAt": "2026-06-07T21:10:45.830Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:52.460Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -119,11 +119,11 @@
       "createdAt": "2026-06-07T21:10:12.366Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:53.140Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -140,11 +140,11 @@
       "createdAt": "2026-06-07T21:10:00.076Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:54.204Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -161,11 +161,11 @@
       "createdAt": "2026-06-07T21:09:45.693Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:55.437Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -182,11 +182,11 @@
       "createdAt": "2026-06-07T21:09:18.182Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:13:56.132Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -203,11 +203,11 @@
       "createdAt": "2026-06-07T21:09:00.078Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:02.157Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -224,11 +224,11 @@
       "createdAt": "2026-06-07T21:08:45.931Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:03.213Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -245,11 +245,11 @@
       "createdAt": "2026-06-07T21:08:13.929Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:04.125Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -266,11 +266,11 @@
       "createdAt": "2026-06-07T21:08:01.090Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:05.308Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -287,11 +287,11 @@
       "createdAt": "2026-06-07T21:07:41.946Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:06.053Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -308,11 +308,11 @@
       "createdAt": "2026-06-07T21:07:25.551Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:07.085Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -329,11 +329,11 @@
       "createdAt": "2026-06-07T21:06:57.304Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:08.277Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -350,11 +350,11 @@
       "createdAt": "2026-06-07T21:06:30.094Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:09.237Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -371,11 +371,11 @@
       "createdAt": "2026-06-07T21:06:09.229Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:10.517Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -392,11 +392,11 @@
       "createdAt": "2026-06-07T21:05:54.606Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:11.669Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -413,11 +413,11 @@
       "createdAt": "2026-06-07T21:05:43.838Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:12.317Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -434,11 +434,11 @@
       "createdAt": "2026-06-07T21:05:27.901Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:13.533Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -455,11 +455,11 @@
       "createdAt": "2026-06-07T21:05:16.356Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:15.029Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -476,11 +476,11 @@
       "createdAt": "2026-06-07T21:04:35.009Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:15.645Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -497,11 +497,11 @@
       "createdAt": "2026-06-07T21:04:23.683Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:16.325Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -520,11 +520,11 @@
       "createdAt": "2026-06-07T21:04:13.540Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:17.397Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -541,11 +541,11 @@
       "createdAt": "2026-06-07T21:03:51.659Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:18.373Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -562,11 +562,11 @@
       "createdAt": "2026-06-07T21:03:34.073Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:19.005Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -583,11 +583,11 @@
       "createdAt": "2026-06-07T21:03:20.811Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:19.885Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -606,11 +606,11 @@
       "createdAt": "2026-06-07T21:02:50.560Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:20.717Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
@@ -627,11 +627,11 @@
       "createdAt": "2026-06-07T21:02:35.023Z",
       "rating": 0,
       "trashedAt": null,
-      "validationStatus": "pending",
-      "validatedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T21:14:22.438Z",
       "importerEmail": "tazdelamor@hotmail.com",
       "importerName": "MMADMIN",
-      "rewardGranted": false,
+      "rewardGranted": true,
       "metadata": {}
     },
     {
