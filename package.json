@@ -1,0 +1,12 @@
+{
+  "name": "market-master",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Prototype multijoueur de jeu d'estimation de prix d'annonces.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

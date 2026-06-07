@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trouve le prix</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="topbar">
+        <div class="brandline">
+          <button class="home-button" id="homeButton" type="button" title="Retour au menu">⌂</button>
+          <img class="brand-logo" src="/trouve-le-prix-logo.png" alt="Trouve le prix" />
+          <div>
+            <p class="eyebrow">Devine le prix</p>
+            <h1 class="sr-only">Trouve le prix</h1>
+          </div>
+        </div>
+        <div class="top-actions">
+          <div class="account-card" id="accountCard"></div>
+          <div class="status" id="status">Hors salon</div>
+        </div>
+      </section>
+
+      <section class="home" id="home">
+        <section class="hub" id="mainMenu">
+          <div class="hub-copy">
+            <img class="hero-logo" src="/trouve-le-prix-logo.png" alt="Trouve le prix" />
+            <p class="eyebrow">Le prix est caché. L'instinct fait le reste.</p>
+            <h2>Trouve le bon prix</h2>
+            <p>Importe des annonces réelles, lance un salon, puis trouve le prix le plus proche avant la fin du chrono.</p>
+          </div>
+          <div class="menu-grid">
+            <button class="menu-card play-card" id="openPlay" type="button">
+              <span>01</span>
+              <strong>Jouer</strong>
+              <small>Créer ou rejoindre une partie</small>
+            </button>
+            <button class="menu-card import-card" id="openImport" type="button">
+              <span>02</span>
+              <strong>Importer</strong>
+              <small>Coller un code source Leboncoin</small>
+            </button>
+            <button class="menu-card admin-card" id="openAdmin" type="button">
+              <span>03</span>
+              <strong>Admin</strong>
+              <small>Gestion, annonces et notes</small>
+            </button>
+          </div>
+        </section>
+
+        <section class="menu-screen hidden" id="playMenu">
+          <div class="screen-head">
+            <button class="ghost" id="backFromPlay" type="button">← Menu</button>
+            <div>
+              <p class="eyebrow">Salon multijoueur</p>
+              <h2>Créer ou rejoindre</h2>
+            </div>
+          </div>
+          <div class="split">
+            <div class="panel setup">
+              <h2>Créer un salon</h2>
+              <label>Pseudo <input id="createName" maxlength="18" value="Joueur" /></label>
+              <div class="grid two">
+                <label>Manches
+                  <select id="rounds">
+                    <option>5</option>
+                    <option>10</option>
+                    <option>15</option>
+                    <option>20</option>
+                  </select>
+                </label>
+                <label>Temps
+                  <select id="roundTime">
+                    <option value="15">15s</option>
+                    <option value="30" selected>30s</option>
+                    <option value="60">60s</option>
+                  </select>
+                </label>
+              </div>
+              <label>Mode
+                <select id="mode">
+                  <option>Classique</option>
+                  <option>Chaos</option>
+                  <option>Blitz</option>
+                  <option>Expert</option>
+                </select>
+              </label>
+              <div class="chips" id="categories"></div>
+              <button id="createRoom">Créer et jouer</button>
+            </div>
+
+            <div class="panel setup">
+              <h2>Rejoindre</h2>
+              <label>Pseudo <input id="joinName" maxlength="18" value="Invité" /></label>
+              <label>Code salon <input id="roomCode" placeholder="ABC123" /></label>
+              <button id="joinRoom">Rejoindre le salon</button>
+              <p class="note">Le prototype utilise un serveur local. Ouvrez plusieurs onglets pour simuler plusieurs joueurs.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="menu-screen hidden" id="importMenu">
+          <div class="screen-head">
+            <button class="ghost" id="backFromImport" type="button">← Menu</button>
+            <div>
+              <p class="eyebrow">Catalogue réel</p>
+              <h2>Importer une annonce</h2>
+            </div>
+          </div>
+          <form class="panel setup source-import" id="htmlImportForm">
+            <label>Code source Leboncoin
+              <textarea id="htmlImportSource" rows="12" placeholder="Ouvrez l'annonce Leboncoin, faites Ctrl+U, Ctrl+A, Ctrl+C, puis collez tout ici." required></textarea>
+            </label>
+            <button>Extraire et ajouter au catalogue</button>
+            <p class="note" id="catalogStatus">Catalogue réel : chargement...</p>
+          </form>
+        </section>
+
+        <section class="menu-screen hidden" id="adminMenu">
+          <div class="screen-head">
+            <button class="ghost" id="backFromAdmin" type="button">← Menu</button>
+            <div>
+              <p class="eyebrow">Administration</p>
+              <h2>Centre de contrôle</h2>
+            </div>
+          </div>
+
+          <form class="admin-gate panel setup" id="adminGate">
+            <h2>Accès sécurisé</h2>
+            <label>Code admin <input id="adminCode" type="password" inputmode="numeric" placeholder="Code" /></label>
+            <button>Entrer</button>
+          </form>
+
+          <div class="admin-dashboard hidden" id="adminDashboard">
+            <aside class="panel admin-nav">
+              <p class="eyebrow">Menu</p>
+              <h2>Gestion</h2>
+              <button class="secondary" id="refreshListings" type="button">Actualiser les annonces</button>
+              <button class="danger-soft" id="trashSelected" type="button">Mettre la sélection à la corbeille</button>
+              <p class="note" id="adminStats">Catalogue : --</p>
+            </aside>
+
+            <section class="admin-notes panel">
+              <p class="eyebrow">Bloc note</p>
+              <h2>Notes de gestion</h2>
+              <textarea id="adminNotebook" rows="12" placeholder="Idées de modes, annonces à vérifier, bugs, équilibrage du scoring..."></textarea>
+              <button id="saveNotebook" type="button">Sauvegarder</button>
+            </section>
+
+            <aside class="panel listing-directory">
+              <div class="directory-head">
+                <div>
+                  <p class="eyebrow">Répertoire</p>
+                  <h2>Annonces</h2>
+                </div>
+                <strong id="directoryCount">0</strong>
+              </div>
+              <div class="directory-tools">
+                <label>Trier par
+                  <select id="listingSort">
+                    <option value="date-desc">Date récente</option>
+                    <option value="date-asc">Date ancienne</option>
+                    <option value="rating-desc">Note haute</option>
+                    <option value="rating-asc">Note basse</option>
+                  </select>
+                </label>
+                <label>Filtrer
+                  <select id="listingFilter">
+                    <option value="all">Toutes les notes</option>
+                    <option value="rated">Notées</option>
+                    <option value="unrated">Sans note</option>
+                    <option value="4plus">4 étoiles et plus</option>
+                  </select>
+                </label>
+                <button class="secondary" id="selectAllListings" type="button">Tout sélectionner</button>
+              </div>
+              <div id="adminListings" class="admin-listings"></div>
+              <div class="trash-bin">
+                <div class="directory-head">
+                  <div>
+                    <p class="eyebrow">Corbeille</p>
+                    <h2>Annonces retirées</h2>
+                  </div>
+                  <strong id="trashCount">0</strong>
+                </div>
+                <div class="trash-actions">
+                  <button class="secondary" id="restoreSelected" type="button">Restaurer sélection</button>
+                  <button class="danger-soft" id="deleteSelected" type="button">Supprimer sélection</button>
+                  <button class="danger" id="deleteAllTrash" type="button">Supprimer tout</button>
+                </div>
+                <div id="trashListings" class="admin-listings trash-listings"></div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </section>
+
+      <section class="game hidden" id="game">
+        <aside class="panel sidebar">
+          <div class="room-code">
+            <span>Salon</span>
+            <strong id="roomId">----</strong>
+          </div>
+          <button id="addBots" class="secondary">Ajouter des joueurs demo</button>
+          <button id="startGame">Lancer la partie</button>
+          <div id="players" class="players"></div>
+        </aside>
+
+        <section class="play-area">
+          <div id="lobby" class="panel centered">
+            <h2>Salon prêt</h2>
+            <p>Choisissez les paramètres, invitez vos amis avec le code, puis lancez la partie.</p>
+          </div>
+
+          <article id="round" class="round hidden">
+            <div class="hero">
+              <img id="listingImage" alt="Photo de l'annonce" />
+              <button class="slider-arrow slider-prev hidden" id="prevImage" type="button" aria-label="Photo précédente">‹</button>
+              <button class="slider-arrow slider-next hidden" id="nextImage" type="button" aria-label="Photo suivante">›</button>
+              <div class="image-count hidden" id="imageCount">1 / 1</div>
+              <div class="timer">
+                <span id="timer">30</span>s
+              </div>
+            </div>
+            <div class="panel listing">
+              <div>
+                <p class="eyebrow" id="listingCategory"></p>
+                <h2 id="listingTitle"></h2>
+                <p id="listingDescription"></p>
+                <p class="location" id="listingLocation"></p>
+              </div>
+              <div class="meta" id="listingMeta"></div>
+              <form id="guessForm" class="guess">
+                <label>Votre estimation en euros
+                  <input id="guessInput" type="number" min="0" step="1" placeholder="Ex: 12500" required />
+                </label>
+                <button>Valider</button>
+              </form>
+            </div>
+          </article>
+
+          <section id="results" class="panel results hidden">
+            <p class="eyebrow">Résultats</p>
+            <div id="listingRatingBox" class="round-rating">
+              <div>
+                <span>Notation de cette annonce</span>
+                <strong id="listingRatingPercent">--%</strong>
+                <small id="listingRatingCount">Aucune note pour le moment</small>
+              </div>
+              <div id="ratingButtons" class="rating-buttons" aria-label="Noter l'annonce"></div>
+            </div>
+            <h2 id="realPrice"></h2>
+            <div id="ranking"></div>
+            <button id="nextRound">Manche suivante</button>
+          </section>
+
+          <section id="restarting" class="panel results restart-screen hidden">
+            <p class="eyebrow">Nouvelle session</p>
+            <h2>Relance dans <span id="restartTimer">15</span>s</h2>
+            <p>Le salon repart avec une nouvelle sélection aléatoire d'annonces réelles.</p>
+          </section>
+
+          <section id="finished" class="panel results hidden">
+            <p class="eyebrow">Partie terminée</p>
+            <h2>Classement final</h2>
+            <div id="finalRanking"></div>
+            <button id="restartSession" class="hidden">Relancer une session</button>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div class="modal-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <section class="auth-modal panel">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Compte joueur</p>
+            <h2 id="authTitle">Connexion</h2>
+          </div>
+          <button class="ghost tiny" id="closeAuth" type="button">Fermer</button>
+        </div>
+        <div class="auth-tabs">
+          <button id="loginTab" class="auth-tab active" type="button">S'identifier</button>
+          <button id="registerTab" class="auth-tab" type="button">Créer un compte</button>
+        </div>
+        <form class="setup" id="authForm">
+          <label class="register-only hidden">Pseudo <input id="authUsername" maxlength="18" placeholder="Votre pseudo" /></label>
+          <label>Email <input id="authEmail" type="email" placeholder="vous@email.fr" required /></label>
+          <label>Mot de passe <input id="authPassword" type="password" minlength="4" placeholder="••••••••" required /></label>
+          <button id="authSubmit">Se connecter</button>
+          <p class="note" id="authMessage"></p>
+        </form>
+      </section>
+    </div>
+    <script src="/app.js"></script>
+  </body>
+</html>

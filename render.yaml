@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: trouve-le-prix
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOW_DEMO_LISTINGS
+        value: false

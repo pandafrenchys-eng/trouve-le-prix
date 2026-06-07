@@ -1,0 +1,21 @@
+{
+  "listings": [
+    {
+      "id": "lbc-authorized-001",
+      "source": "Leboncoin - flux autorise",
+      "category": "High-Tech",
+      "title": "Console portable avec housse et jeux",
+      "description": "Annonce exemple au format attendu par le jeu. Le prix sera masque pendant la manche.",
+      "images": [
+        "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "location": "France, region approximative",
+      "metadata": {
+        "Etat": "Bon",
+        "Accessoires": "Housse, chargeur",
+        "Categorie": "Console"
+      },
+      "actual_price": 210
+    }
+  ]
+}
