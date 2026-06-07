@@ -364,6 +364,11 @@ function normalizeListing(raw, index = 0) {
     createdAt: raw.createdAt || raw.created_at || new Date().toISOString(),
     rating: Math.max(0, Math.min(5, Number(raw.rating) || 0)),
     trashedAt: raw.trashedAt || raw.trashed_at || null,
+    validationStatus: raw.validationStatus || raw.validation_status || "approved",
+    validatedAt: raw.validatedAt || raw.validated_at || null,
+    importerEmail: raw.importerEmail || raw.importer_email || "",
+    importerName: raw.importerName || raw.importer_name || "",
+    rewardGranted: Boolean(raw.rewardGranted || raw.reward_granted),
     metadata: raw.metadata && typeof raw.metadata === "object" ? raw.metadata : {}
   };
 }
@@ -481,7 +486,9 @@ function parseLeboncoinHtml(html, sourceUrl = "") {
 }
 
 function rebuildAuthorizedListings() {
-  authorizedListings = [...importedListings, ...feedListings].filter((listing) => !listing.trashedAt);
+  authorizedListings = [...importedListings, ...feedListings].filter(
+    (listing) => !listing.trashedAt && listing.validationStatus !== "pending"
+  );
   authorizedListingsUpdatedAt = authorizedListings.length ? new Date().toISOString() : authorizedListingsUpdatedAt;
 }
 
@@ -740,7 +747,7 @@ const server = http.createServer(async (req, res) => {
 
   if (req.method === "GET" && url.pathname === "/api/listings") {
     const includeTrash = url.searchParams.get("trash") === "1";
-    const source = includeTrash ? importedListings.filter((listing) => listing.trashedAt) : authorizedListings;
+    const source = includeTrash ? importedListings.filter((listing) => listing.trashedAt) : importedListings.filter((listing) => !listing.trashedAt);
     return json(res, 200, {
       listings: source.map((listing) => ({
         id: listing.id,
@@ -751,9 +758,36 @@ const server = http.createServer(async (req, res) => {
         images: listing.images,
         createdAt: listing.createdAt,
         rating: listing.rating || 0,
-        trashedAt: listing.trashedAt || null
+        trashedAt: listing.trashedAt || null,
+        validationStatus: listing.validationStatus || "approved",
+        importerEmail: listing.importerEmail || "",
+        importerName: listing.importerName || "",
+        rewardGranted: Boolean(listing.rewardGranted)
       }))
     });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/listings/validate") {
+    const body = await readBody(req);
+    const listing = importedListings.find((item) => item.id === body.id);
+    if (!listing) return json(res, 404, { error: "Annonce introuvable" });
+    if (listing.trashedAt) return json(res, 409, { error: "Cette annonce est dans la corbeille" });
+
+    const reward = !listing.rewardGranted && listing.importerEmail
+      ? {
+          email: listing.importerEmail,
+          username: listing.importerName,
+          amount: 100,
+          reason: "Import Leboncoin validé"
+        }
+      : null;
+
+    listing.validationStatus = "approved";
+    listing.validatedAt = new Date().toISOString();
+    if (reward) listing.rewardGranted = true;
+    rebuildAuthorizedListings();
+    await saveImportedListings();
+    return json(res, 200, { listing, reward, total: authorizedListings.length });
   }
 
   if (req.method === "POST" && url.pathname === "/api/listings/rating") {
@@ -856,6 +890,9 @@ const server = http.createServer(async (req, res) => {
         id: body.id || `lbc-${crypto.createHash("sha1").update(sourceUrl).digest("hex").slice(0, 12)}`,
         source: "Leboncoin - import manuel",
         images: Array.isArray(body.images) ? body.images : [body.imageUrl],
+        importerEmail: body.importerEmail,
+        importerName: body.importerName,
+        validationStatus: "pending",
         metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : {}
       },
       importedListings.length
@@ -936,12 +973,18 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    const listing = parseLeboncoinHtml(html, detectedUrl);
+      const listing = parseLeboncoinHtml(html, detectedUrl);
     if (!listing) {
       return json(res, 422, {
         error: "Impossible de détecter automatiquement titre, image et prix dans ce HTML. Utilise l'import manuel."
       });
     }
+
+    listing.importerEmail = String(body.importerEmail || "");
+    listing.importerName = String(body.importerName || "");
+    listing.validationStatus = "pending";
+    listing.validatedAt = null;
+    listing.rewardGranted = false;
 
     const existingIndex = importedListings.findIndex((item) => item.id === listing.id);
     if (existingIndex >= 0) importedListings[existingIndex] = listing;

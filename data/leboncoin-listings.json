@@ -1,6 +1,27 @@
 {
   "listings": [
     {
+      "id": "lbc-733541bc35fb",
+      "source": "Leboncoin - import automatique",
+      "category": "Maison",
+      "title": "Fauteuil électrique",
+      "description": "Fauteuil électrique avec commande à droite Largeur 1m10 Hauteur 1m 3 Positions Repose pied Dossier rabattable",
+      "location": "Localisation non détectée",
+      "actualPrice": 320,
+      "images": [
+        "https://img.leboncoin.fr/api/v1/lbcpb1/images/cf/1b/89/cf1b899afb47a59e609bb47b54f3b9bb060a9e2d.jpg?rule=ad-image"
+      ],
+      "createdAt": "2026-06-07T11:43:38.543Z",
+      "rating": 0,
+      "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": "2026-06-07T11:43:47.329Z",
+      "importerEmail": "tazdelamor@hotmail.com",
+      "importerName": "MMADMIN",
+      "rewardGranted": true,
+      "metadata": {}
+    },
+    {
       "id": "lbc-91c2f2782f12",
       "source": "Leboncoin - import automatique",
       "category": "Insolite",
@@ -14,6 +35,11 @@
       "createdAt": "2026-06-07T00:10:44.814Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -30,6 +56,11 @@
       "createdAt": "2026-06-07T00:09:50.809Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -46,6 +77,11 @@
       "createdAt": "2026-06-07T00:09:27.848Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -62,6 +98,11 @@
       "createdAt": "2026-06-07T00:09:10.094Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -78,6 +119,11 @@
       "createdAt": "2026-06-07T00:07:52.486Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -105,6 +151,11 @@
       "createdAt": "2026-06-07T00:07:13.631Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -121,6 +172,11 @@
       "createdAt": "2026-06-07T00:06:54.804Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -137,6 +193,11 @@
       "createdAt": "2026-06-07T00:06:42.827Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -153,6 +214,11 @@
       "createdAt": "2026-06-07T00:06:31.244Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -169,6 +235,11 @@
       "createdAt": "2026-06-07T00:06:12.843Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -185,6 +256,11 @@
       "createdAt": "2026-06-07T00:05:31.993Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -201,6 +277,11 @@
       "createdAt": "2026-06-07T00:05:15.642Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -217,6 +298,11 @@
       "createdAt": "2026-06-07T00:04:51.256Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -233,6 +319,11 @@
       "createdAt": "2026-06-07T00:04:23.169Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -249,6 +340,11 @@
       "createdAt": "2026-06-07T00:04:00.302Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -265,6 +361,11 @@
       "createdAt": "2026-06-07T00:03:40.192Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -281,6 +382,11 @@
       "createdAt": "2026-06-07T00:03:24.155Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -297,6 +403,11 @@
       "createdAt": "2026-06-07T00:02:56.926Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -313,6 +424,11 @@
       "createdAt": "2026-06-07T00:02:40.185Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -329,6 +445,11 @@
       "createdAt": "2026-06-06T23:55:50.180Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -345,6 +466,11 @@
       "createdAt": "2026-06-06T23:49:42.961Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -363,6 +489,11 @@
       "createdAt": "2026-06-06T23:21:17.514Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -383,6 +514,11 @@
       "createdAt": "2026-06-06T23:20:54.701Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -399,6 +535,11 @@
       "createdAt": "2026-06-06T23:13:46.191Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -415,6 +556,11 @@
       "createdAt": "2026-06-06T23:13:46.192Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     },
     {
@@ -448,6 +594,11 @@
       "createdAt": "2026-06-06T23:13:46.192Z",
       "rating": 0,
       "trashedAt": null,
+      "validationStatus": "approved",
+      "validatedAt": null,
+      "importerEmail": "",
+      "importerName": "",
+      "rewardGranted": false,
       "metadata": {}
     }
   ]

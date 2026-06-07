@@ -275,7 +275,7 @@ h2 {
 
 .account-stats {
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(4, auto);
   gap: 8px;
   color: var(--muted);
   font-size: 0.8rem;
@@ -456,6 +456,12 @@ h2 {
     linear-gradient(135deg, #14101f, #29115f);
 }
 
+.wheel-card {
+  background:
+    radial-gradient(circle at 78% 22%, rgba(255, 201, 84, 0.32), transparent 32%),
+    linear-gradient(135deg, #2a0d5f, #8a3bff);
+}
+
 .menu-card:hover {
   transform: translateY(-2px);
   filter: saturate(1.08);
@@ -629,7 +635,7 @@ h2 {
 
 .directory-item {
   display: grid;
-  grid-template-columns: auto 68px 1fr auto;
+  grid-template-columns: auto 68px minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   border: 1px solid var(--line);
@@ -671,8 +677,105 @@ h2 {
   font-weight: 800;
 }
 
+.validation-pill {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 6px;
+  border-radius: 999px;
+  padding: 0.22rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.validation-pill.pending {
+  border: 1px solid rgba(255, 176, 100, 0.42);
+  background: rgba(255, 122, 24, 0.14);
+  color: #ffd6a8;
+}
+
+.validation-pill.approved {
+  border: 1px solid rgba(104, 255, 176, 0.28);
+  background: rgba(104, 255, 176, 0.1);
+  color: #9cffcf;
+}
+
+.validate-import {
+  white-space: nowrap;
+  background: linear-gradient(135deg, #ffb03f, #ff7a18);
+}
+
 .rating-control {
   min-width: 92px;
+}
+
+.wheel-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(280px, 1fr);
+  align-items: center;
+  gap: 24px;
+  overflow: hidden;
+}
+
+.wheel-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 360px;
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: 16px;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 34px solid #ffb03f;
+  filter: drop-shadow(0 0 14px rgba(255, 176, 63, 0.65));
+}
+
+.chance-wheel {
+  position: relative;
+  width: min(320px, 78vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 10px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background:
+    conic-gradient(from -18deg, #ff7a18 0 20%, #6f2cff 20% 40%, #ffb03f 40% 60%, #4115aa 60% 80%, #ff4d00 80% 100%);
+  box-shadow: 0 0 44px rgba(111, 44, 255, 0.38), inset 0 0 32px rgba(0, 0, 0, 0.34);
+  transition: transform 2.8s cubic-bezier(0.12, 0.74, 0.18, 1);
+}
+
+.chance-wheel::after {
+  content: "";
+  position: absolute;
+  width: 84px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff4d6, #ff9b2f);
+  box-shadow: 0 0 24px rgba(255, 176, 63, 0.62);
+}
+
+.chance-wheel span {
+  position: absolute;
+  z-index: 1;
+  font-weight: 1000;
+  color: white;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.chance-wheel span:nth-child(1) { transform: rotate(0deg) translateY(-118px); }
+.chance-wheel span:nth-child(2) { transform: rotate(72deg) translateY(-118px) rotate(-72deg); }
+.chance-wheel span:nth-child(3) { transform: rotate(144deg) translateY(-118px) rotate(-144deg); }
+.chance-wheel span:nth-child(4) { transform: rotate(216deg) translateY(-118px) rotate(-216deg); }
+.chance-wheel span:nth-child(5) { transform: rotate(288deg) translateY(-118px) rotate(-288deg); }
+
+.wheel-info {
+  display: grid;
+  gap: 12px;
 }
 
 .trash-bin {
@@ -1132,6 +1235,7 @@ h2 {
   .hub,
   .split,
   .admin-dashboard,
+  .wheel-panel,
   .game,
   .listing,
   .grid.two,
@@ -1204,6 +1308,15 @@ h2 {
 
   .listing-directory {
     max-height: none;
+  }
+
+  .directory-item {
+    grid-template-columns: auto 58px minmax(0, 1fr);
+  }
+
+  .directory-item .rating-control,
+  .directory-item .validate-import {
+    grid-column: 1 / -1;
   }
 }
 

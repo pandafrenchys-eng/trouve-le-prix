@@ -11,9 +11,11 @@ const state = {
   trashListings: [],
   selectedListings: new Set(),
   selectedTrash: new Set(),
+  processedGameWins: new Set(JSON.parse(localStorage.getItem("marketProcessedGameWins") || "[]")),
   finalRenderKey: null,
   imageListingId: null,
-  imageIndex: 0
+  imageIndex: 0,
+  wheelRotation: 0
 };
 
 const $ = (id) => document.getElementById(id);
@@ -39,6 +41,8 @@ function showMenu(name) {
   $("playMenu").classList.toggle("hidden", name !== "play");
   $("importMenu").classList.toggle("hidden", name !== "import");
   $("adminMenu").classList.toggle("hidden", name !== "admin");
+  $("wheelMenu").classList.toggle("hidden", name !== "wheel");
+  if (name === "wheel") renderWheel();
 }
 
 function goHome() {
@@ -99,6 +103,7 @@ function sortedAndFilteredListings() {
 function listingRow(listing, mode) {
   const checked = mode === "trash" ? state.selectedTrash.has(listing.id) : state.selectedListings.has(listing.id);
   const date = listing.createdAt ? new Date(listing.createdAt).toLocaleDateString("fr-FR") : "Sans date";
+  const pending = listing.validationStatus === "pending";
   return `
     <div class="directory-item ${mode === "trash" ? "trashed" : ""}">
       <input type="checkbox" data-select-${mode}="${listing.id}" ${checked ? "checked" : ""} />
@@ -106,10 +111,12 @@ function listingRow(listing, mode) {
       <div>
         <strong>${listing.title}</strong>
         <span>${listing.category} · ${listing.location} · ${date}</span>
+        <small class="validation-pill ${pending ? "pending" : "approved"}">${pending ? "En attente admin" : "Validée"}${listing.importerName ? ` · ${listing.importerName}` : ""}</small>
       </div>
       <select class="rating-control" data-rating="${listing.id}" ${mode === "trash" ? "disabled" : ""}>
         ${[0, 1, 2, 3, 4, 5].map((value) => `<option value="${value}" ${Number(listing.rating) === value ? "selected" : ""}>${value ? `${value}/5` : "Note"}</option>`).join("")}
       </select>
+      ${mode !== "trash" && pending ? `<button class="tiny validate-import" type="button" data-validate="${listing.id}">Valider +100$</button>` : ""}
     </div>`;
 }
 
@@ -158,6 +165,11 @@ function saveUsers(users) {
 }
 
 function saveAccount(account) {
+  account.money = Number(account.money) || 0;
+  account.closestWins = Number(account.closestWins) || 0;
+  account.wins = Number(account.wins) || 0;
+  account.guesses = Number(account.guesses) || 0;
+  account.goldTickets = Number(account.goldTickets) || 0;
   state.account = account;
   localStorage.setItem("marketAccount", JSON.stringify(account));
   if (account.email) {
@@ -166,6 +178,7 @@ function saveAccount(account) {
     saveUsers(users);
   }
   renderAccount();
+  if ($("wheelMenu") && !$("wheelMenu").classList.contains("hidden")) renderWheel();
 }
 
 function openAuth(mode = "login") {
@@ -214,6 +227,7 @@ function renderAccount() {
     </div>
     <div class="account-stats">
       <span>Argent ${account.money || 0}$</span>
+      <span>Tickets d'or ${account.goldTickets || 0}</span>
       <span>Ratio ${ratio}%</span>
       <span>Victoires ${account.wins || 0}</span>
     </div>`;
@@ -233,8 +247,8 @@ function syncAccountFromRoom(room) {
   if (!state.account || !state.player) return;
   const current = room.players?.find((player) => player.id === state.player.id);
   if (!current) return;
-  state.account.money = current.wallet || state.account.money || 0;
-  state.account.wins = current.wins || state.account.wins || 0;
+  state.account.money = Math.max(state.account.money || 0, current.wallet || 0);
+  state.account.wins = Math.max(state.account.wins || 0, current.wins || 0);
   saveAccount(state.account);
 }
 
@@ -249,6 +263,40 @@ function recordRoundStats(round) {
   if (myRank === 0) state.account.closestWins = (state.account.closestWins || 0) + 1;
   localStorage.setItem("marketProcessedRounds", JSON.stringify([...state.processedRounds]));
   saveAccount(state.account);
+}
+
+function awardFinalWin(room) {
+  if (!state.account || !state.player || room.status !== "finished") return;
+  const winner = room.leaderboard?.[0];
+  if (!winner || winner.id !== state.player.id) return;
+  const key = `${room.id}-${room.sessionNumber || 0}`;
+  if (state.processedGameWins.has(key)) return;
+  state.processedGameWins.add(key);
+  state.account.goldTickets = (state.account.goldTickets || 0) + 1;
+  localStorage.setItem("marketProcessedGameWins", JSON.stringify([...state.processedGameWins]));
+  saveAccount(state.account);
+  $("status").textContent = "Partie gagnée : +1 ticket d'or";
+}
+
+function applyImportReward(reward) {
+  if (!reward?.email) return;
+  const users = storedUsers();
+  const account = users[reward.email];
+  if (account) {
+    account.money = (Number(account.money) || 0) + (Number(reward.amount) || 0);
+    users[reward.email] = account;
+    saveUsers(users);
+    if (state.account?.email === reward.email) saveAccount(account);
+  }
+  $("status").textContent = `${reward.username || reward.email} reçoit +${reward.amount}$ pour l'import validé.`;
+}
+
+function renderWheel() {
+  const tickets = state.account?.goldTickets || 0;
+  $("wheelTickets").textContent = `${tickets} ticket${tickets > 1 ? "s" : ""} d'or`;
+  $("spinWheel").disabled = !state.account || tickets < 1;
+  if (!state.account) $("wheelResult").textContent = "Connecte-toi à un compte joueur pour utiliser la roue.";
+  else if (tickets < 1) $("wheelResult").textContent = "Gagne une partie pour recevoir 1 ticket d'or.";
 }
 
 function selectedCategories() {
@@ -418,6 +466,7 @@ function renderRatingButtons(listingId, selectedRating = 0) {
 }
 
 function renderFinal(room) {
+  awardFinalWin(room);
   const renderKey = `${room.id}-${room.sessionNumber || 0}-${room.leaderboard.map((p) => `${p.id}:${Math.round(p.score)}`).join("|")}`;
   if (state.finalRenderKey === renderKey) return;
   state.finalRenderKey = renderKey;
@@ -593,7 +642,22 @@ $("roundTime").addEventListener("change", () => {
 });
 
 $("openPlay").addEventListener("click", () => showMenu("play"));
-$("openImport").addEventListener("click", () => showMenu("import"));
+$("openImport").addEventListener("click", () => {
+  if (!state.account) {
+    $("status").textContent = "Connecte-toi pour importer une annonce et recevoir la récompense.";
+    openAuth("login");
+    return;
+  }
+  showMenu("import");
+});
+$("openWheel").addEventListener("click", () => {
+  if (!state.account) {
+    $("status").textContent = "Connecte-toi pour accéder à la Roue de la chance";
+    openAuth("login");
+    return;
+  }
+  showMenu("wheel");
+});
 $("openAdmin").addEventListener("click", () => {
   if (state.account?.username !== "MMADMIN") {
     $("status").textContent = "Admin réservé au compte MMADMIN";
@@ -608,6 +672,7 @@ $("openAdmin").addEventListener("click", () => {
 $("backFromPlay").addEventListener("click", () => showMenu("main"));
 $("backFromImport").addEventListener("click", () => showMenu("main"));
 $("backFromAdmin").addEventListener("click", () => showMenu("main"));
+$("backFromWheel").addEventListener("click", () => showMenu("main"));
 $("homeButton").addEventListener("click", goHome);
 
 $("adminGate").addEventListener("submit", async (event) => {
@@ -652,6 +717,22 @@ $("adminListings").addEventListener("change", async (event) => {
     const listing = state.adminListings.find((item) => item.id === ratingId);
     if (listing) listing.rating = Number(event.target.value);
     renderAdminListings();
+  }
+});
+
+$("adminListings").addEventListener("click", async (event) => {
+  const validateId = event.target.closest("[data-validate]")?.dataset.validate;
+  if (!validateId) return;
+  try {
+    const data = await api("/api/listings/validate", {
+      method: "POST",
+      body: JSON.stringify({ id: validateId })
+    });
+    applyImportReward(data.reward);
+    await refreshAdminListings();
+    await refreshCatalogStatus();
+  } catch (error) {
+    showError(error);
   }
 });
 
@@ -706,7 +787,8 @@ $("authForm").addEventListener("submit", (event) => {
       money: 0,
       closestWins: 0,
       wins: 0,
-      guesses: 0
+      guesses: 0,
+      goldTickets: 0
     };
     users[email] = account;
     saveUsers(users);
@@ -734,15 +816,22 @@ $("saveNotebook").addEventListener("click", () => {
 
 $("htmlImportForm").addEventListener("submit", async (event) => {
   event.preventDefault();
+  if (!state.account) {
+    $("status").textContent = "Connecte-toi avant d'envoyer une annonce.";
+    openAuth("login");
+    return;
+  }
   try {
     $("status").textContent = "Extraction depuis le HTML en cours...";
     const data = await api("/api/listings/import-html", {
       method: "POST",
       body: JSON.stringify({
-        html: $("htmlImportSource").value
+        html: $("htmlImportSource").value,
+        importerEmail: state.account?.email || "",
+        importerName: state.account?.username || ""
       })
     });
-    $("status").textContent = `Annonce "${data.listing.title}" ajoutée. Catalogue réel : ${data.total} annonce(s).`;
+    $("status").textContent = `Annonce "${data.listing.title}" envoyée en attente de validation admin.`;
     $("htmlImportForm").reset();
     await refreshCatalogStatus();
   } catch (error) {
@@ -753,3 +842,22 @@ $("htmlImportForm").addEventListener("submit", async (event) => {
 initCategories();
 refreshCatalogStatus();
 renderAccount();
+
+$("spinWheel").addEventListener("click", () => {
+  if (!state.account) {
+    openAuth("login");
+    return;
+  }
+  if ((state.account.goldTickets || 0) < 1) {
+    $("wheelResult").textContent = "Il te faut 1 ticket d'or pour lancer la roue.";
+    return;
+  }
+  const amounts = [200, 250, 300, 350, 400, 450, 500, 550, 600];
+  const amount = amounts[Math.floor(Math.random() * amounts.length)];
+  state.account.goldTickets -= 1;
+  state.account.money = (state.account.money || 0) + amount;
+  state.wheelRotation += 1080 + Math.floor(Math.random() * 720);
+  $("chanceWheel").style.transform = `rotate(${state.wheelRotation}deg)`;
+  $("wheelResult").textContent = `La roue s'arrête sur ${amount}$ : gain ajouté au compte.`;
+  saveAccount(state.account);
+});
