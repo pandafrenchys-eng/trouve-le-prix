@@ -20,6 +20,7 @@ const state = {
 
 const $ = (id) => document.getElementById(id);
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const integer = new Intl.NumberFormat("fr-FR");
 let authMode = "login";
 
 function isHost() {
@@ -67,6 +68,19 @@ async function refreshCatalogStatus() {
     $("catalogStatus").textContent = `Catalogue serveur partagé : ${status.authorized} annonce(s) jouable(s), dont ${status.imported} importée(s). Visible pour tous les joueurs après validation admin.`;
   } catch (error) {
     $("catalogStatus").textContent = "Catalogue serveur partagé : impossible à lire.";
+  }
+}
+
+async function refreshGlobalStats() {
+  try {
+    const stats = await api("/api/global-stats");
+    $("globalCounter").innerHTML = `
+      <span>Parties jouées</span>
+      <strong>${integer.format(stats.totalGamesPlayed || 0)}</strong>`;
+  } catch (error) {
+    $("globalCounter").innerHTML = `
+      <span>Parties jouées</span>
+      <strong>--</strong>`;
   }
 }
 
@@ -588,6 +602,7 @@ $("startGame").addEventListener("click", async () => {
       body: JSON.stringify({ playerId: state.player?.id })
     });
     state.room = data.room;
+    await refreshGlobalStats();
     render();
   } catch (error) {
     showError(error);
@@ -616,6 +631,7 @@ $("restartSession").addEventListener("click", async () => {
       body: JSON.stringify({ playerId: state.player?.id })
     });
     state.room = data.room;
+    await refreshGlobalStats();
     render();
   } catch (error) {
     showError(error);
@@ -908,6 +924,8 @@ $("htmlImportForm").addEventListener("submit", async (event) => {
 
 initCategories();
 refreshCatalogStatus();
+refreshGlobalStats();
+setInterval(refreshGlobalStats, 10000);
 renderAccount();
 applyDirectoryHeight(localStorage.getItem("marketDirectoryHeight") || 520);
 

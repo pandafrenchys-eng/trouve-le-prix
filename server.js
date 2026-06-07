@@ -9,6 +9,7 @@ const PUBLIC_DIR = path.join(__dirname, "public");
 const DATA_DIR = path.join(__dirname, "data");
 const IMPORTED_LISTINGS_FILE = path.join(DATA_DIR, "leboncoin-listings.json");
 const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
+const GLOBAL_STATS_FILE = path.join(DATA_DIR, "global-stats.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -252,6 +253,7 @@ let feedListings = [];
 let importedListings = [];
 let accounts = {};
 let dbPool = null;
+let globalStats = { totalGamesPlayed: 0 };
 const listingVotes = new Map();
 let authorizedListingsUpdatedAt = null;
 
@@ -293,6 +295,13 @@ async function initDatabase() {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await dbPool.query(`
+      CREATE TABLE IF NOT EXISTS global_stats (
+        metric TEXT PRIMARY KEY,
+        value BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
     console.log("PostgreSQL persistence enabled");
   } catch (error) {
     dbPool = null;
@@ -316,6 +325,45 @@ async function saveServerState(key, payload) {
     [key, JSON.stringify(payload)]
   );
   return true;
+}
+
+async function loadGlobalStats() {
+  if (dbPool) {
+    const result = await dbPool.query("SELECT value FROM global_stats WHERE metric = $1", ["total_games_played"]);
+    globalStats.totalGamesPlayed = Number(result.rows[0]?.value) || 0;
+    return;
+  }
+
+  try {
+    const payload = JSON.parse(await fs.promises.readFile(GLOBAL_STATS_FILE, "utf8"));
+    globalStats.totalGamesPlayed = Number(payload.totalGamesPlayed) || 0;
+  } catch (error) {
+    if (error.code !== "ENOENT") console.warn(`Could not load global stats: ${error.message}`);
+  }
+}
+
+async function saveGlobalStats() {
+  await fs.promises.mkdir(DATA_DIR, { recursive: true });
+  await fs.promises.writeFile(GLOBAL_STATS_FILE, JSON.stringify(globalStats, null, 2), "utf8");
+}
+
+async function incrementGlobalGamesPlayed() {
+  globalStats.totalGamesPlayed += 1;
+  if (dbPool) {
+    const result = await dbPool.query(
+      `INSERT INTO global_stats (metric, value, updated_at)
+       VALUES ($1, 1, NOW())
+       ON CONFLICT (metric)
+       DO UPDATE SET value = global_stats.value + 1, updated_at = NOW()
+       RETURNING value`,
+      ["total_games_played"]
+    );
+    globalStats.totalGamesPlayed = Number(result.rows[0]?.value) || globalStats.totalGamesPlayed;
+    return globalStats.totalGamesPlayed;
+  }
+
+  await saveGlobalStats();
+  return globalStats.totalGamesPlayed;
 }
 
 function publicAccount(account) {
@@ -703,6 +751,11 @@ function startRound(room, options = {}) {
   }
   const listing = pickListing(room);
   if (!listing) return false;
+  if (options.newSession) {
+    incrementGlobalGamesPlayed().catch((error) => {
+      console.warn(`Could not update global games counter: ${error.message}`);
+    });
+  }
   room.status = "playing";
   room.restartAt = null;
   room.roundIndex += 1;
@@ -912,6 +965,14 @@ const server = http.createServer(async (req, res) => {
       realFeedActive: authorizedListings.length > 0,
       imageOnly: true,
       antiRepeatPerRoom: true
+    });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/global-stats") {
+    return json(res, 200, {
+      totalGamesPlayed: Number(globalStats.totalGamesPlayed) || 0,
+      storage: dbPool ? "postgresql" : "server-file",
+      synchronized: true
     });
   }
 
@@ -1314,6 +1375,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, async () => {
   await initDatabase();
   await loadAccounts();
+  await loadGlobalStats();
   await loadImportedListings();
   await refreshAuthorizedListings();
   setInterval(refreshAuthorizedListings, 10 * 60 * 1000).unref();
