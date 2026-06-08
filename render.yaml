@@ -15,5 +15,13 @@ services:
         sync: false
       - key: ADMIN_EMAIL
         sync: false
+      - key: ADMIN_EMAILS
+        sync: false
       - key: ADMIN_USERNAME
         value: MMADMIN
+      - key: BOOTSTRAP_ADMIN_EMAIL
+        sync: false
+      - key: BOOTSTRAP_ADMIN_USERNAME
+        value: MASTER1
+      - key: BOOTSTRAP_ADMIN_PASSWORD
+        sync: false

@@ -13,7 +13,15 @@ const GLOBAL_STATS_FILE = path.join(DATA_DIR, "global-stats.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
 const DATABASE_URL = process.env.DATABASE_URL;
 const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+const BOOTSTRAP_ADMIN_EMAIL = String(process.env.BOOTSTRAP_ADMIN_EMAIL || "").trim().toLowerCase();
+const ADMIN_EMAILS = new Set(
+  [ADMIN_EMAIL, BOOTSTRAP_ADMIN_EMAIL, ...String(process.env.ADMIN_EMAILS || "").split(",")]
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean)
+);
 const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "MMADMIN").trim() || "MMADMIN";
+const BOOTSTRAP_ADMIN_USERNAME = String(process.env.BOOTSTRAP_ADMIN_USERNAME || "MASTER1").trim() || "MASTER1";
+const BOOTSTRAP_ADMIN_PASSWORD = String(process.env.BOOTSTRAP_ADMIN_PASSWORD || "");
 
 const baseListings = [
   {
@@ -373,7 +381,7 @@ function publicAccount(account) {
   return {
     email: account.email,
     username: account.username,
-    isAdmin: Boolean(ADMIN_EMAIL && account.email === ADMIN_EMAIL),
+    isAdmin: ADMIN_EMAILS.has(account.email),
     sessionToken: account.sessionToken || "",
     money: Number(account.money) || 0,
     closestWins: Number(account.closestWins) || 0,
@@ -385,7 +393,7 @@ function publicAccount(account) {
 
 function normalizeAccount(raw = {}) {
   const email = String(raw.email || "").trim().toLowerCase();
-  const username = ADMIN_EMAIL && email === ADMIN_EMAIL ? ADMIN_USERNAME : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
+  const username = ADMIN_EMAILS.has(email) ? (raw.username || ADMIN_USERNAME) : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
   return {
     email,
     username,
@@ -446,6 +454,37 @@ async function migrateStoredAccountPasswords() {
     await saveAccounts();
     console.log("Migrated legacy account passwords to hashes");
   }
+}
+
+async function ensureBootstrapAdmin() {
+  if (!BOOTSTRAP_ADMIN_EMAIL || !BOOTSTRAP_ADMIN_PASSWORD) return;
+  if (BOOTSTRAP_ADMIN_PASSWORD.length < 10) {
+    console.warn("Bootstrap admin ignored: password must be at least 10 characters");
+    return;
+  }
+  const existing = accounts[BOOTSTRAP_ADMIN_EMAIL];
+  if (existing) {
+    let changed = false;
+    if (existing.username !== BOOTSTRAP_ADMIN_USERNAME) {
+      existing.username = BOOTSTRAP_ADMIN_USERNAME;
+      changed = true;
+    }
+    if (!existing.passwordHash) {
+      existing.passwordHash = hashPassword(BOOTSTRAP_ADMIN_PASSWORD);
+      existing.password = "";
+      changed = true;
+    }
+    if (changed) await saveAccounts();
+    return;
+  }
+
+  accounts[BOOTSTRAP_ADMIN_EMAIL] = normalizeAccount({
+    email: BOOTSTRAP_ADMIN_EMAIL,
+    username: BOOTSTRAP_ADMIN_USERNAME,
+    passwordHash: hashPassword(BOOTSTRAP_ADMIN_PASSWORD)
+  });
+  await saveAccounts();
+  console.log(`Bootstrap admin created: ${BOOTSTRAP_ADMIN_USERNAME}`);
 }
 
 function eventAlreadyApplied(account, eventId) {
@@ -992,8 +1031,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, 401, { error: "Email ou mot de passe incorrect" });
     }
     let changed = migratePasswordHash(account, body.password);
-    if (ADMIN_EMAIL && email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
+    if (email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
       account.username = ADMIN_USERNAME;
+      changed = true;
+    }
+    if (email === BOOTSTRAP_ADMIN_EMAIL && account.username !== BOOTSTRAP_ADMIN_USERNAME) {
+      account.username = BOOTSTRAP_ADMIN_USERNAME;
       changed = true;
     }
     account.sessionToken = newSessionToken();
@@ -1504,6 +1547,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, HOST, async () => {
   await initDatabase();
   await loadAccounts();
+  await ensureBootstrapAdmin();
   await loadGlobalStats();
   await loadImportedListings();
   await refreshAuthorizedListings();
