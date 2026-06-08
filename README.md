@@ -116,6 +116,8 @@ Le serveur utilise automatiquement `process.env.PORT` et ecoute sur `0.0.0.0`, c
    - `NODE_ENV=production`
    - `ALLOW_DEMO_LISTINGS=false`
    - `DATABASE_URL=<url PostgreSQL>`
+   - `ADMIN_EMAIL=<email du compte admin>`
+   - `ADMIN_USERNAME=MMADMIN`
 
 ### Persistance des annonces sur Render
 
@@ -141,6 +143,17 @@ Quand la base est bien branchee, le statut indique :
 ```
 
 Sans `DATABASE_URL`, le serveur reste compatible localement mais le statut indique `storage: "server-file"`, ce qui n'est pas fiable sur Render.
+
+### Compte admin
+
+Ne mettez pas l'email admin dans le code source. Configurez-le uniquement dans les variables d'environnement du serveur :
+
+```text
+ADMIN_EMAIL=<email du compte admin>
+ADMIN_USERNAME=MMADMIN
+```
+
+Le navigateur ne reçoit qu'un indicateur `isAdmin` apres connexion. L'adresse admin reste donc une configuration privee du serveur.
 
 Le fichier `render.yaml` est deja inclus pour faciliter un deploiement Blueprint.
 

@@ -13,3 +13,7 @@ services:
         value: false
       - key: DATABASE_URL
         sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_USERNAME
+        value: MMADMIN

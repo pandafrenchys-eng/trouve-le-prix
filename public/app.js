@@ -23,15 +23,13 @@ const $ = (id) => document.getElementById(id);
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const integer = new Intl.NumberFormat("fr-FR");
 let authMode = "login";
-const ADMIN_EMAIL = "tazdelamor@hotmail.com";
-const ADMIN_USERNAME = "MMADMIN";
 
 function isHost() {
   return Boolean(state.room && state.player?.id === state.room.hostId);
 }
 
 function isAdminAccount(account = state.account) {
-  return Boolean(account?.isAdmin || account?.username === ADMIN_USERNAME || account?.email === ADMIN_EMAIL);
+  return Boolean(account?.isAdmin);
 }
 
 function roundTimeFromForm() {
@@ -238,9 +236,9 @@ function saveAccount(account) {
 }
 
 async function refreshAccountFromServer() {
-  if (!state.account?.email) return null;
+  if (!state.account?.email || !state.account?.sessionToken) return null;
   try {
-    const data = await api(`/api/accounts/${encodeURIComponent(state.account.email)}`);
+    const data = await api(`/api/accounts/${encodeURIComponent(state.account.email)}?sessionToken=${encodeURIComponent(state.account.sessionToken)}`);
     saveAccount(data.account);
     return data.account;
   } catch (error) {
@@ -249,11 +247,11 @@ async function refreshAccountFromServer() {
 }
 
 async function applyAccountStatEvent(payload) {
-  if (!state.account?.email) return;
+  if (!state.account?.email || !state.account?.sessionToken) return;
   try {
     const data = await api("/api/accounts/stats", {
       method: "POST",
-      body: JSON.stringify({ ...payload, email: state.account.email })
+      body: JSON.stringify({ ...payload, email: state.account.email, sessionToken: state.account.sessionToken })
     });
     saveAccount(data.account);
   } catch (error) {
@@ -396,8 +394,8 @@ function awardFinalWin(room) {
 }
 
 function applyImportReward(reward) {
-  if (!reward?.email) return;
-  if (state.account?.email === reward.email) refreshAccountFromServer();
+  if (!reward) return;
+  refreshAccountFromServer();
   $("status").textContent = `${reward.username || reward.email} reçoit +${reward.amount}$ pour l'import validé.`;
 }
 
@@ -919,7 +917,7 @@ $("authForm").addEventListener("submit", async (event) => {
         method: "POST",
         body: JSON.stringify({ email, username, password })
       });
-      users[email] = { ...data.account, password };
+      users[email] = data.account;
       saveUsers(users);
       saveAccount(data.account);
       $("status").textContent = "Compte créé";
@@ -935,19 +933,12 @@ $("authForm").addEventListener("submit", async (event) => {
       method: "POST",
       body: JSON.stringify({ email, password, username: users[email]?.username })
     });
-    users[email] = { ...data.account, password };
+    users[email] = data.account;
     saveUsers(users);
     saveAccount(data.account);
     $("status").textContent = "Connecté";
     closeAuth();
   } catch (error) {
-    const localAccount = users[email];
-    if (localAccount && localAccount.password === password) {
-      saveAccount(localAccount);
-      $("status").textContent = "Connecté";
-      closeAuth();
-      return;
-    }
     $("authMessage").textContent = error.message || "Email ou mot de passe incorrect.";
   }
 });
@@ -1004,7 +995,7 @@ $("spinWheel").addEventListener("click", async () => {
     $("spinWheel").disabled = true;
     const data = await api("/api/accounts/spin-wheel", {
       method: "POST",
-      body: JSON.stringify({ email: state.account.email })
+      body: JSON.stringify({ email: state.account.email, sessionToken: state.account.sessionToken })
     });
     state.wheelRotation += 1080 + Math.floor(Math.random() * 720);
     $("chanceWheel").style.transform = `rotate(${state.wheelRotation}deg)`;

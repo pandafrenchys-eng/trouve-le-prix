@@ -12,8 +12,8 @@ const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const GLOBAL_STATS_FILE = path.join(DATA_DIR, "global-stats.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
 const DATABASE_URL = process.env.DATABASE_URL;
-const ADMIN_EMAIL = "tazdelamor@hotmail.com";
-const ADMIN_USERNAME = "MMADMIN";
+const ADMIN_EMAIL = String(process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+const ADMIN_USERNAME = String(process.env.ADMIN_USERNAME || "MMADMIN").trim() || "MMADMIN";
 
 const baseListings = [
   {
@@ -373,7 +373,8 @@ function publicAccount(account) {
   return {
     email: account.email,
     username: account.username,
-    isAdmin: account.email === ADMIN_EMAIL || account.username === ADMIN_USERNAME,
+    isAdmin: Boolean(ADMIN_EMAIL && account.email === ADMIN_EMAIL),
+    sessionToken: account.sessionToken || "",
     money: Number(account.money) || 0,
     closestWins: Number(account.closestWins) || 0,
     wins: Number(account.wins) || 0,
@@ -384,11 +385,13 @@ function publicAccount(account) {
 
 function normalizeAccount(raw = {}) {
   const email = String(raw.email || "").trim().toLowerCase();
-  const username = email === ADMIN_EMAIL ? ADMIN_USERNAME : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
+  const username = ADMIN_EMAIL && email === ADMIN_EMAIL ? ADMIN_USERNAME : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
   return {
     email,
     username,
     password: String(raw.password || ""),
+    passwordHash: String(raw.passwordHash || raw.password_hash || ""),
+    sessionToken: String(raw.sessionToken || raw.session_token || ""),
     money: Number(raw.money) || 0,
     closestWins: Number(raw.closestWins) || 0,
     wins: Number(raw.wins) || 0,
@@ -396,6 +399,53 @@ function normalizeAccount(raw = {}) {
     goldTickets: Number(raw.goldTickets) || 0,
     processedEvents: raw.processedEvents && typeof raw.processedEvents === "object" ? raw.processedEvents : {}
   };
+}
+
+function newSessionToken() {
+  return crypto.randomBytes(24).toString("hex");
+}
+
+function verifySession(account, token) {
+  return Boolean(account?.sessionToken && token && account.sessionToken === String(token));
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const hash = crypto.scryptSync(String(password || ""), salt, 64).toString("hex");
+  return `${salt}:${hash}`;
+}
+
+function verifyPassword(account, password) {
+  const candidate = String(password || "");
+  if (account.passwordHash) {
+    const [salt, expected] = account.passwordHash.split(":");
+    if (!salt || !expected) return false;
+    const actual = crypto.scryptSync(candidate, salt, 64);
+    const expectedBuffer = Buffer.from(expected, "hex");
+    return expectedBuffer.length === actual.length && crypto.timingSafeEqual(expectedBuffer, actual);
+  }
+  return Boolean(account.password && account.password === candidate);
+}
+
+function migratePasswordHash(account, password) {
+  if (account.passwordHash) return false;
+  account.passwordHash = hashPassword(password);
+  account.password = "";
+  return true;
+}
+
+async function migrateStoredAccountPasswords() {
+  let changed = false;
+  Object.values(accounts).forEach((account) => {
+    if (account.password && !account.passwordHash) {
+      account.passwordHash = hashPassword(account.password);
+      account.password = "";
+      changed = true;
+    }
+  });
+  if (changed) {
+    await saveAccounts();
+    console.log("Migrated legacy account passwords to hashes");
+  }
 }
 
 function eventAlreadyApplied(account, eventId) {
@@ -417,6 +467,7 @@ async function loadAccounts() {
         .filter(([email]) => email)
     );
     console.log(`Loaded ${Object.keys(accounts).length} player accounts from PostgreSQL`);
+    await migrateStoredAccountPasswords();
     return;
   }
 
@@ -428,6 +479,7 @@ async function loadAccounts() {
         .filter(([email]) => email)
     );
     console.log(`Loaded ${Object.keys(accounts).length} player accounts`);
+    await migrateStoredAccountPasswords();
     if (dbPool) await saveAccounts();
   } catch (error) {
     if (error.code !== "ENOENT") console.warn(`Could not load accounts: ${error.message}`);
@@ -917,6 +969,9 @@ const server = http.createServer(async (req, res) => {
     if (!account.email || !account.email.includes("@")) return json(res, 400, { error: "Email invalide" });
     if (!account.password || account.password.length < 4) return json(res, 400, { error: "Mot de passe trop court" });
     if (accounts[account.email]) return json(res, 409, { error: "Un compte existe déjà avec cet email" });
+    account.passwordHash = hashPassword(account.password);
+    account.password = "";
+    account.sessionToken = newSessionToken();
     accounts[account.email] = account;
     await saveAccounts();
     return json(res, 201, { account: publicAccount(account) });
@@ -928,16 +983,22 @@ const server = http.createServer(async (req, res) => {
     let account = accounts[email];
     if (!account && email && email.includes("@") && String(body.password || "").length >= 4) {
       account = normalizeAccount({ email, password: body.password, username: body.username || email.split("@")[0] });
+      account.passwordHash = hashPassword(body.password);
+      account.password = "";
       accounts[email] = account;
       await saveAccounts();
     }
-    if (!account || account.password !== String(body.password || "")) {
+    if (!account || !verifyPassword(account, body.password)) {
       return json(res, 401, { error: "Email ou mot de passe incorrect" });
     }
-    if (email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
+    let changed = migratePasswordHash(account, body.password);
+    if (ADMIN_EMAIL && email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
       account.username = ADMIN_USERNAME;
-      await saveAccounts();
+      changed = true;
     }
+    account.sessionToken = newSessionToken();
+    changed = true;
+    if (changed) await saveAccounts();
     return json(res, 200, { account: publicAccount(account) });
   }
 
@@ -946,6 +1007,7 @@ const server = http.createServer(async (req, res) => {
     const incoming = normalizeAccount(body);
     if (!incoming.email || !accounts[incoming.email]) return json(res, 404, { error: "Compte introuvable" });
     const current = accounts[incoming.email];
+    if (!verifySession(current, body.sessionToken)) return json(res, 401, { error: "Session invalide" });
     accounts[incoming.email] = {
       ...current,
       username: incoming.username || current.username,
@@ -963,6 +1025,7 @@ const server = http.createServer(async (req, res) => {
     const email = decodeURIComponent(url.pathname.split("/")[3] || "").trim().toLowerCase();
     const account = accounts[email];
     if (!account) return json(res, 404, { error: "Compte introuvable" });
+    if (!verifySession(account, url.searchParams.get("sessionToken"))) return json(res, 401, { error: "Session invalide" });
     return json(res, 200, { account: publicAccount(account) });
   }
 
@@ -971,6 +1034,7 @@ const server = http.createServer(async (req, res) => {
     const email = String(body.email || "").trim().toLowerCase();
     const account = accounts[email];
     if (!account) return json(res, 404, { error: "Compte introuvable" });
+    if (!verifySession(account, body.sessionToken)) return json(res, 401, { error: "Session invalide" });
     const eventId = String(body.eventId || "");
     if (!eventAlreadyApplied(account, eventId)) {
       if (body.type === "round") {
@@ -992,6 +1056,7 @@ const server = http.createServer(async (req, res) => {
     const email = String(body.email || "").trim().toLowerCase();
     const account = accounts[email];
     if (!account) return json(res, 404, { error: "Compte introuvable" });
+    if (!verifySession(account, body.sessionToken)) return json(res, 401, { error: "Session invalide" });
     if ((Number(account.goldTickets) || 0) < 1) return json(res, 409, { error: "Il te faut 1 ticket d'or pour lancer la roue." });
     const amounts = [200, 250, 300, 350, 400, 450, 500, 550, 600];
     const amount = amounts[Math.floor(Math.random() * amounts.length)];
@@ -1055,7 +1120,6 @@ const server = http.createServer(async (req, res) => {
         rating: listing.rating || 0,
         trashedAt: listing.trashedAt || null,
         validationStatus: listing.validationStatus || "approved",
-        importerEmail: listing.importerEmail || "",
         importerName: listing.importerName || "",
         rewardGranted: Boolean(listing.rewardGranted)
       }))
@@ -1085,7 +1149,11 @@ const server = http.createServer(async (req, res) => {
     }
     rebuildAuthorizedListings();
     await saveImportedListings();
-    return json(res, 200, { listing, reward, total: authorizedListings.length });
+    return json(res, 200, {
+      listing,
+      reward: reward ? { amount: reward.amount, username: reward.username } : null,
+      total: authorizedListings.length
+    });
   }
 
   if (req.method === "POST" && url.pathname === "/api/listings/rating") {
