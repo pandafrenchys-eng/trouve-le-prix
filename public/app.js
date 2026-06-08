@@ -23,9 +23,15 @@ const $ = (id) => document.getElementById(id);
 const euro = new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 const integer = new Intl.NumberFormat("fr-FR");
 let authMode = "login";
+const ADMIN_EMAIL = "tazdelamor@hotmail.com";
+const ADMIN_USERNAME = "MMADMIN";
 
 function isHost() {
   return Boolean(state.room && state.player?.id === state.room.hostId);
+}
+
+function isAdminAccount(account = state.account) {
+  return Boolean(account?.isAdmin || account?.username === ADMIN_USERNAME || account?.email === ADMIN_EMAIL);
 }
 
 function roundTimeFromForm() {
@@ -279,7 +285,7 @@ function renderAuthMode() {
 
 function renderAccount() {
   const account = state.account;
-  const isAdmin = account?.username === "MMADMIN";
+  const isAdmin = isAdminAccount(account);
   if ($("openAdmin")) $("openAdmin").classList.toggle("hidden", !isAdmin);
   if (!account) {
     $("accountCard").innerHTML = `
@@ -765,7 +771,7 @@ $("openWheel").addEventListener("click", () => {
   showMenu("wheel");
 });
 $("openAdmin").addEventListener("click", () => {
-  if (state.account?.username !== "MMADMIN") {
+  if (!isAdminAccount()) {
     $("status").textContent = "Admin réservé au compte MMADMIN";
     showMenu("main");
     return;

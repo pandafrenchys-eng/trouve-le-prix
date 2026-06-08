@@ -12,6 +12,8 @@ const ACCOUNTS_FILE = path.join(DATA_DIR, "accounts.json");
 const GLOBAL_STATS_FILE = path.join(DATA_DIR, "global-stats.json");
 const ALLOW_DEMO_LISTINGS = process.env.ALLOW_DEMO_LISTINGS === "true";
 const DATABASE_URL = process.env.DATABASE_URL;
+const ADMIN_EMAIL = "tazdelamor@hotmail.com";
+const ADMIN_USERNAME = "MMADMIN";
 
 const baseListings = [
   {
@@ -371,6 +373,7 @@ function publicAccount(account) {
   return {
     email: account.email,
     username: account.username,
+    isAdmin: account.email === ADMIN_EMAIL || account.username === ADMIN_USERNAME,
     money: Number(account.money) || 0,
     closestWins: Number(account.closestWins) || 0,
     wins: Number(account.wins) || 0,
@@ -381,9 +384,10 @@ function publicAccount(account) {
 
 function normalizeAccount(raw = {}) {
   const email = String(raw.email || "").trim().toLowerCase();
+  const username = email === ADMIN_EMAIL ? ADMIN_USERNAME : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
   return {
     email,
-    username: String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18),
+    username,
     password: String(raw.password || ""),
     money: Number(raw.money) || 0,
     closestWins: Number(raw.closestWins) || 0,
@@ -929,6 +933,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (!account || account.password !== String(body.password || "")) {
       return json(res, 401, { error: "Email ou mot de passe incorrect" });
+    }
+    if (email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
+      account.username = ADMIN_USERNAME;
+      await saveAccounts();
     }
     return json(res, 200, { account: publicAccount(account) });
   }
