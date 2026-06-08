@@ -264,6 +264,7 @@ let importedListings = [];
 let accounts = {};
 let dbPool = null;
 let globalStats = { totalGamesPlayed: 0 };
+let activityFeed = [];
 const listingVotes = new Map();
 let authorizedListingsUpdatedAt = null;
 
@@ -376,6 +377,32 @@ async function incrementGlobalGamesPlayed() {
   return globalStats.totalGamesPlayed;
 }
 
+async function loadActivityFeed() {
+  const stored = await loadServerState("activity-feed");
+  if (stored) {
+    const rows = Array.isArray(stored) ? stored : stored.items;
+    activityFeed = Array.isArray(rows) ? rows.slice(0, 80) : [];
+    return;
+  }
+}
+
+async function saveActivityFeed() {
+  await saveServerState("activity-feed", { items: activityFeed });
+}
+
+async function pushFeed(type, username, detail = "") {
+  if (!username) return;
+  activityFeed.unshift({
+    id: id("feed_"),
+    type,
+    username: String(username).slice(0, 24),
+    detail: String(detail || "").slice(0, 90),
+    createdAt: new Date().toISOString()
+  });
+  activityFeed = activityFeed.slice(0, 80);
+  await saveActivityFeed();
+}
+
 function publicAccount(account) {
   if (!account) return null;
   return {
@@ -391,6 +418,26 @@ function publicAccount(account) {
   };
 }
 
+function publicMember(account) {
+  const bannedUntil = account.bannedUntil || "";
+  const isPermanent = bannedUntil === "forever";
+  const isTimed = bannedUntil && !isPermanent && new Date(bannedUntil).getTime() > Date.now();
+  return {
+    email: account.email,
+    username: account.username,
+    isAdmin: ADMIN_EMAILS.has(account.email),
+    money: Number(account.money) || 0,
+    closestWins: Number(account.closestWins) || 0,
+    wins: Number(account.wins) || 0,
+    guesses: Number(account.guesses) || 0,
+    goldTickets: Number(account.goldTickets) || 0,
+    createdAt: account.createdAt || "",
+    bannedUntil,
+    banReason: account.banReason || "",
+    isBanned: Boolean(isPermanent || isTimed)
+  };
+}
+
 function normalizeAccount(raw = {}) {
   const email = String(raw.email || "").trim().toLowerCase();
   const username = ADMIN_EMAILS.has(email) ? (raw.username || ADMIN_USERNAME) : String(raw.username || email.split("@")[0] || "Joueur").slice(0, 18);
@@ -400,6 +447,9 @@ function normalizeAccount(raw = {}) {
     password: String(raw.password || ""),
     passwordHash: String(raw.passwordHash || raw.password_hash || ""),
     sessionToken: String(raw.sessionToken || raw.session_token || ""),
+    createdAt: String(raw.createdAt || raw.created_at || new Date().toISOString()),
+    bannedUntil: String(raw.bannedUntil || raw.banned_until || ""),
+    banReason: String(raw.banReason || raw.ban_reason || ""),
     money: Number(raw.money) || 0,
     closestWins: Number(raw.closestWins) || 0,
     wins: Number(raw.wins) || 0,
@@ -415,6 +465,32 @@ function newSessionToken() {
 
 function verifySession(account, token) {
   return Boolean(account?.sessionToken && token && account.sessionToken === String(token));
+}
+
+function isAccountBanned(account) {
+  if (!account?.bannedUntil) return false;
+  if (account.bannedUntil === "forever") return true;
+  const until = new Date(account.bannedUntil).getTime();
+  if (Number.isNaN(until)) return false;
+  if (until > Date.now()) return true;
+  account.bannedUntil = "";
+  account.banReason = "";
+  saveAccounts().catch((error) => console.warn(`Could not clear expired ban: ${error.message}`));
+  return false;
+}
+
+function adminFromBody(body = {}) {
+  const email = String(body.adminEmail || body.email || "").trim().toLowerCase();
+  const account = accounts[email];
+  if (!account || !ADMIN_EMAILS.has(account.email) || !verifySession(account, body.sessionToken)) return null;
+  return account;
+}
+
+function adminFromQuery(url) {
+  const email = String(url.searchParams.get("adminEmail") || "").trim().toLowerCase();
+  const account = accounts[email];
+  if (!account || !ADMIN_EMAILS.has(account.email) || !verifySession(account, url.searchParams.get("sessionToken"))) return null;
+  return account;
 }
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
@@ -1011,6 +1087,7 @@ const server = http.createServer(async (req, res) => {
     account.sessionToken = newSessionToken();
     accounts[account.email] = account;
     await saveAccounts();
+    await pushFeed("signup", account.username, "vient de s'inscrire");
     return json(res, 201, { account: publicAccount(account) });
   }
 
@@ -1027,6 +1104,13 @@ const server = http.createServer(async (req, res) => {
     }
     if (!account || !verifyPassword(account, body.password)) {
       return json(res, 401, { error: "Email ou mot de passe incorrect" });
+    }
+    if (isAccountBanned(account)) {
+      return json(res, 403, {
+        error: account.bannedUntil === "forever"
+          ? "Compte banni définitivement"
+          : `Compte banni jusqu'au ${new Date(account.bannedUntil).toLocaleString("fr-FR")}`
+      });
     }
     let changed = migratePasswordHash(account, body.password);
     if (email === ADMIN_EMAIL && account.username !== ADMIN_USERNAME) {
@@ -1086,6 +1170,7 @@ const server = http.createServer(async (req, res) => {
       if (body.type === "game-win") {
         account.wins = (Number(account.wins) || 0) + 1;
         account.goldTickets = (Number(account.goldTickets) || 0) + 1;
+        await pushFeed("win", account.username, "a gagné une partie");
       }
       await saveAccounts();
     }
@@ -1141,6 +1226,53 @@ const server = http.createServer(async (req, res) => {
       storage: dbPool ? "postgresql" : "server-file",
       synchronized: true
     });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/feed") {
+    return json(res, 200, { items: activityFeed.slice(0, 30) });
+  }
+
+  if (req.method === "GET" && url.pathname === "/api/admin/members") {
+    if (!adminFromQuery(url)) return json(res, 403, { error: "Admin requis" });
+    const members = Object.values(accounts)
+      .map(publicMember)
+      .sort((a, b) => a.username.localeCompare(b.username, "fr"));
+    return json(res, 200, {
+      members: members.filter((member) => !member.isBanned),
+      banned: members.filter((member) => member.isBanned)
+    });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/ban") {
+    const body = await readBody(req);
+    const admin = adminFromBody(body);
+    if (!admin) return json(res, 403, { error: "Admin requis" });
+    const email = String(body.targetEmail || "").trim().toLowerCase();
+    const target = accounts[email];
+    if (!target) return json(res, 404, { error: "Membre introuvable" });
+    if (ADMIN_EMAILS.has(target.email)) return json(res, 400, { error: "Impossible de bannir un administrateur" });
+    const permanent = Boolean(body.permanent);
+    const minutes = Math.max(1, Math.min(525600, Number(body.minutes) || 60));
+    target.bannedUntil = permanent ? "forever" : new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    target.banReason = String(body.reason || "Banni par admin").slice(0, 140);
+    target.sessionToken = "";
+    await saveAccounts();
+    await pushFeed("ban", target.username, permanent ? "a été banni définitivement" : `a été banni ${minutes} min`);
+    return json(res, 200, { member: publicMember(target) });
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/admin/unban") {
+    const body = await readBody(req);
+    const admin = adminFromBody(body);
+    if (!admin) return json(res, 403, { error: "Admin requis" });
+    const email = String(body.targetEmail || "").trim().toLowerCase();
+    const target = accounts[email];
+    if (!target) return json(res, 404, { error: "Membre introuvable" });
+    target.bannedUntil = "";
+    target.banReason = "";
+    await saveAccounts();
+    await pushFeed("unban", target.username, "a été débanni");
+    return json(res, 200, { member: publicMember(target) });
   }
 
   if (req.method === "GET" && url.pathname === "/api/listings") {
@@ -1547,6 +1679,7 @@ server.listen(PORT, HOST, async () => {
   await loadAccounts();
   await ensureBootstrapAdmin();
   await loadGlobalStats();
+  await loadActivityFeed();
   await loadImportedListings();
   await refreshAuthorizedListings();
   setInterval(refreshAuthorizedListings, 10 * 60 * 1000).unref();

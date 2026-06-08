@@ -9,6 +9,8 @@ const state = {
   adminUnlocked: sessionStorage.getItem("marketAdminUnlocked") === "true",
   adminListings: [],
   trashListings: [],
+  members: [],
+  bannedMembers: [],
   selectedListings: new Set(),
   selectedTrash: new Set(),
   processedGameWins: new Set(JSON.parse(localStorage.getItem("marketProcessedGameWins") || "[]")),
@@ -89,6 +91,44 @@ async function refreshGlobalStats() {
   }
 }
 
+async function refreshFeed() {
+  try {
+    const data = await api("/api/feed");
+    const items = data.items || [];
+    $("feedCount").textContent = items.length;
+    $("feedItems").innerHTML = items.length
+      ? items.map((item) => `
+        <div class="feed-item ${item.type}">
+          <strong>${item.username}</strong>
+          <span>${item.detail}</span>
+          <small>${new Date(item.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</small>
+        </div>`).join("")
+      : `<p class="note">Aucune activité pour le moment.</p>`;
+  } catch (error) {
+    $("feedItems").innerHTML = `<p class="note">Feed indisponible.</p>`;
+  }
+}
+
+function adminPayload(extra = {}) {
+  return {
+    adminEmail: state.account?.email,
+    sessionToken: state.account?.sessionToken,
+    ...extra
+  };
+}
+
+async function refreshMembers() {
+  if (!isAdminAccount() || !state.account?.sessionToken) return;
+  try {
+    const data = await api(`/api/admin/members?adminEmail=${encodeURIComponent(state.account.email)}&sessionToken=${encodeURIComponent(state.account.sessionToken)}`);
+    state.members = data.members || [];
+    state.bannedMembers = data.banned || [];
+    renderMembers();
+  } catch (error) {
+    $("memberList").innerHTML = `<p class="note">${error.message}</p>`;
+  }
+}
+
 async function refreshAdminListings() {
   try {
     const [activeData, trashData] = await Promise.all([api("/api/listings"), api("/api/listings?trash=1")]);
@@ -100,6 +140,30 @@ async function refreshAdminListings() {
   } catch (error) {
     $("adminListings").innerHTML = `<p class="note">${error.message}</p>`;
   }
+}
+
+function memberRow(member, banned = false) {
+  const ratio = member.guesses ? Math.round((member.closestWins / member.guesses) * 100) : 0;
+  const until = member.bannedUntil === "forever" ? "Définitif" : member.bannedUntil ? new Date(member.bannedUntil).toLocaleString("fr-FR") : "";
+  return `
+    <div class="member-row ${banned ? "banned" : ""}">
+      <div>
+        <strong>${member.username}</strong>
+        <span>${member.email}</span>
+        <small>${member.money}$ · ${member.wins} victoire(s) · ratio ${ratio}% · ${member.goldTickets} ticket(s)</small>
+        ${banned ? `<small class="ban-until">Ban : ${until}${member.banReason ? ` · ${member.banReason}` : ""}</small>` : ""}
+      </div>
+      ${banned
+    ? `<button class="tiny secondary" type="button" data-unban="${member.email}">Débannir</button>`
+    : `<button class="tiny danger-soft" type="button" data-ban-member="${member.email}" ${member.isAdmin ? "disabled" : ""}>Bannir</button>`}
+    </div>`;
+}
+
+function renderMembers() {
+  $("memberCount").textContent = state.members.length;
+  $("bannedCount").textContent = state.bannedMembers.length;
+  $("memberList").innerHTML = state.members.length ? state.members.map((member) => memberRow(member)).join("") : `<p class="note">Aucun membre inscrit.</p>`;
+  $("bannedList").innerHTML = state.bannedMembers.length ? state.bannedMembers.map((member) => memberRow(member, true)).join("") : `<p class="note">Aucun membre banni.</p>`;
 }
 
 function sortedAndFilteredListings() {
@@ -390,6 +454,7 @@ function awardFinalWin(room) {
   state.processedGameWins.add(key);
   localStorage.setItem("marketProcessedGameWins", JSON.stringify([...state.processedGameWins]));
   applyAccountStatEvent({ type: "game-win", eventId: `game-win:${key}:${state.player.id}` });
+  refreshFeed();
   $("status").textContent = "Partie gagnée : +1 ticket d'or";
 }
 
@@ -778,7 +843,10 @@ $("openAdmin").addEventListener("click", async () => {
   showMenu("admin");
   $("adminGate").classList.toggle("hidden", state.adminUnlocked);
   $("adminDashboard").classList.toggle("hidden", !state.adminUnlocked);
-  if (state.adminUnlocked) refreshAdminListings();
+  if (state.adminUnlocked) {
+    refreshAdminListings();
+    refreshMembers();
+  }
 });
 $("backFromPlay").addEventListener("click", () => showMenu("main"));
 $("backFromImport").addEventListener("click", () => showMenu("main"));
@@ -798,9 +866,45 @@ $("adminGate").addEventListener("submit", async (event) => {
   $("adminDashboard").classList.remove("hidden");
   $("status").textContent = "Admin connecté";
   await refreshAdminListings();
+  await refreshMembers();
 });
 
 $("refreshListings").addEventListener("click", refreshAdminListings);
+$("memberList").addEventListener("click", async (event) => {
+  const targetEmail = event.target.closest("[data-ban-member]")?.dataset.banMember;
+  if (!targetEmail) return;
+  try {
+    await api("/api/admin/ban", {
+      method: "POST",
+      body: JSON.stringify(adminPayload({
+        targetEmail,
+        minutes: $("banMinutes").value,
+        permanent: $("banPermanent").checked,
+        reason: $("banReason").value
+      }))
+    });
+    $("status").textContent = "Membre banni";
+    await refreshMembers();
+    await refreshFeed();
+  } catch (error) {
+    showError(error);
+  }
+});
+$("bannedList").addEventListener("click", async (event) => {
+  const targetEmail = event.target.closest("[data-unban]")?.dataset.unban;
+  if (!targetEmail) return;
+  try {
+    await api("/api/admin/unban", {
+      method: "POST",
+      body: JSON.stringify(adminPayload({ targetEmail }))
+    });
+    $("status").textContent = "Membre débanni";
+    await refreshMembers();
+    await refreshFeed();
+  } catch (error) {
+    showError(error);
+  }
+});
 $("listingSort").addEventListener("change", renderAdminListings);
 $("listingFilter").addEventListener("change", renderAdminListings);
 $("directoryHeight").addEventListener("input", (event) => applyDirectoryHeight(event.target.value));
@@ -922,6 +1026,7 @@ $("authForm").addEventListener("submit", async (event) => {
       saveUsers(users);
       saveAccount(data.account);
       $("status").textContent = "Compte créé";
+      await refreshFeed();
       closeAuth();
     } catch (error) {
       $("authMessage").textContent = error.message;
@@ -978,7 +1083,9 @@ $("htmlImportForm").addEventListener("submit", async (event) => {
 initCategories();
 refreshCatalogStatus();
 refreshGlobalStats();
+refreshFeed();
 setInterval(refreshGlobalStats, 10000);
+setInterval(refreshFeed, 5000);
 renderAccount();
 refreshAccountFromServer();
 applyDirectoryHeight(localStorage.getItem("marketDirectoryHeight") || 520);

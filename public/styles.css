@@ -213,6 +213,75 @@ label {
   gap: 10px;
 }
 
+.live-feed {
+  position: sticky;
+  top: 10px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border-color: rgba(255, 122, 24, 0.24);
+  background: rgba(12, 8, 26, 0.72);
+}
+
+.feed-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #ffb064;
+  font-size: 0.72rem;
+  font-weight: 1000;
+  letter-spacing: 0.14em;
+}
+
+.feed-head strong {
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(255, 122, 24, 0.14);
+}
+
+.feed-items {
+  display: flex;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.feed-item {
+  flex: 0 0 auto;
+  max-width: 310px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.42rem 0.58rem;
+  background: rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.feed-item strong {
+  color: #fff3e8;
+}
+
+.feed-item span,
+.feed-item small {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feed-item.win {
+  border-color: rgba(255, 176, 63, 0.34);
+  box-shadow: inset 0 0 18px rgba(255, 176, 63, 0.08);
+}
+
 h1,
 h2,
 p {
@@ -724,7 +793,7 @@ h2 {
 
 .admin-dashboard {
   display: grid;
-  grid-template-columns: 220px minmax(280px, 0.8fr) minmax(430px, 1.35fr);
+  grid-template-columns: 210px minmax(260px, 0.72fr) minmax(320px, 0.95fr) minmax(430px, 1.3fr);
   gap: 18px;
   align-items: start;
 }
@@ -746,6 +815,77 @@ h2 {
   background: rgba(255, 122, 24, 0.08);
   border-color: rgba(255, 122, 24, 0.25);
   line-height: 1.55;
+}
+
+.admin-members {
+  display: grid;
+  gap: 12px;
+}
+
+.directory-head.compact {
+  margin-top: 4px;
+}
+
+.member-window {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  max-height: 300px;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-color: rgba(255, 122, 24, 0.72) rgba(255, 255, 255, 0.08);
+  scrollbar-width: thin;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.member-row.banned {
+  border-color: rgba(255, 77, 0, 0.24);
+  background: rgba(255, 77, 0, 0.08);
+}
+
+.member-row strong,
+.member-row span,
+.member-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.member-row span,
+.member-row small {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.ban-until {
+  color: #ffb064 !important;
+}
+
+.ban-controls {
+  display: grid;
+  grid-template-columns: 0.8fr 0.8fr 1.2fr;
+  gap: 8px;
+  align-items: end;
+}
+
+.toggle-line {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-line input {
+  width: auto;
 }
 
 .listing-directory {
@@ -1433,6 +1573,15 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .live-feed {
+    grid-template-columns: 1fr;
+  }
+
+  .feed-items {
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
   .topbar {
     align-items: flex-start;
     flex-direction: column;
@@ -1450,7 +1599,8 @@ h2 {
 
   .account-stats,
   .directory-tools,
-  .trash-actions {
+  .trash-actions,
+  .ban-controls {
     grid-template-columns: 1fr;
   }
 

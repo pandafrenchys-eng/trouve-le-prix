@@ -27,6 +27,16 @@
         </div>
       </section>
 
+      <aside class="live-feed panel" id="liveFeed">
+        <div class="feed-head">
+          <span>FEED</span>
+          <strong id="feedCount">0</strong>
+        </div>
+        <div id="feedItems" class="feed-items">
+          <p class="note">Chargement du feed...</p>
+        </div>
+      </aside>
+
       <section class="home" id="home">
         <section class="hub" id="mainMenu">
           <div class="hub-copy">
@@ -161,6 +171,34 @@
               <h2>Notes de gestion</h2>
               <textarea id="adminNotebook" rows="12" placeholder="Idées de modes, annonces à vérifier, bugs, équilibrage du scoring..."></textarea>
               <button id="saveNotebook" type="button">Sauvegarder</button>
+            </section>
+
+            <section class="panel admin-members">
+              <div class="directory-head">
+                <div>
+                  <p class="eyebrow">Membres</p>
+                  <h2>Inscrits</h2>
+                </div>
+                <strong id="memberCount">0</strong>
+              </div>
+              <div id="memberList" class="member-window"></div>
+              <div class="ban-controls">
+                <label>Durée du ban
+                  <input id="banMinutes" type="number" min="1" max="525600" value="60" />
+                </label>
+                <label class="toggle-line"><input id="banPermanent" type="checkbox" /> Ban définitif</label>
+                <label>Raison
+                  <input id="banReason" maxlength="140" placeholder="Raison optionnelle" />
+                </label>
+              </div>
+              <div class="directory-head compact">
+                <div>
+                  <p class="eyebrow">Bannis</p>
+                  <h2>Déban</h2>
+                </div>
+                <strong id="bannedCount">0</strong>
+              </div>
+              <div id="bannedList" class="member-window banned-window"></div>
             </section>
 
             <aside class="panel listing-directory">
