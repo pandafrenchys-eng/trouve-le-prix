@@ -469,11 +469,9 @@ async function ensureBootstrapAdmin() {
       existing.username = BOOTSTRAP_ADMIN_USERNAME;
       changed = true;
     }
-    if (!existing.passwordHash) {
-      existing.passwordHash = hashPassword(BOOTSTRAP_ADMIN_PASSWORD);
-      existing.password = "";
-      changed = true;
-    }
+    existing.passwordHash = hashPassword(BOOTSTRAP_ADMIN_PASSWORD);
+    existing.password = "";
+    changed = true;
     if (changed) await saveAccounts();
     return;
   }

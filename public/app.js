@@ -284,7 +284,7 @@ function renderAuthMode() {
 function renderAccount() {
   const account = state.account;
   const isAdmin = isAdminAccount(account);
-  if ($("openAdmin")) $("openAdmin").classList.toggle("hidden", !isAdmin);
+  if ($("openAdmin")) $("openAdmin").classList.toggle("hidden", !account);
   if (!account) {
     $("accountCard").innerHTML = `
       <div class="account-login">
@@ -768,9 +768,10 @@ $("openWheel").addEventListener("click", () => {
   }
   showMenu("wheel");
 });
-$("openAdmin").addEventListener("click", () => {
-  if (!isAdminAccount()) {
-    $("status").textContent = "Admin réservé au compte MMADMIN";
+$("openAdmin").addEventListener("click", async () => {
+  const freshAccount = await refreshAccountFromServer();
+  if (!isAdminAccount(freshAccount || state.account)) {
+    $("status").textContent = "Admin réservé. Reconnecte-toi si ton compte admin vient d'être créé.";
     showMenu("main");
     return;
   }
